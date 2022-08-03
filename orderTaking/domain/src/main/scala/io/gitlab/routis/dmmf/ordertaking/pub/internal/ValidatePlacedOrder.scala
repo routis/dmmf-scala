@@ -40,11 +40,14 @@ private[internal] case class ValidatePlacedOrder(
         .mapError(nestErrors(field))
     def ensureNotNull                            = Validation.fromOptionWith(missingField(field))(Option(unvalidatedAddress))
 
-    for
-      _              <- ensureNotNull.toZIOWithAllErrors
-      checkedAddress <- check
-      address        <- validate(checkedAddress)
-    yield address
+    ZIO.logSpan(s"toCheckAddress-${field}") {
+      for
+        _              <- ensureNotNull.toZIOWithAllErrors
+        checkedAddress <- check
+        address        <- validate(checkedAddress)
+        _              <- ZIO.log(s"Valid $address")
+      yield address
+    }
 
   def toProductCode(
     field: FieldName,
@@ -104,42 +107,59 @@ private[internal] case class ValidatePlacedOrder(
     unvalidated: UnvalidatedOrder
   ): IO[PlaceOrderError.ValidationFailure, ValidatedOrder] =
 
-    val orderId      = makeOrderId.requiredField("orderId", unvalidated.orderId)
-    val customerInfo = (toCustomerInfo(_: UnvalidatedCustomerInfo).toValidation)
-      .requiredField("customerInfo", unvalidated.unvalidatedCustomerInfo)
-
-    def lines =
+    def lines(field: FieldName) =
       val maybeLines                                                  = Option(unvalidated.lines).flatMap(NonEmptyChunk.fromIterableOption)
       val ensureNotNullNotEmpty                                       = Validation
-        .fromOptionWith(fieldError("lines")(ValidationError.Cause("Missing or empty")))(maybeLines)
+        .fromOptionWith(fieldError(field)(ValidationError.Cause("Missing or empty")))(maybeLines)
         .toZIOWithAllErrors
       def vol(unvalidatedOrderLine: UnvalidatedOrderLine, index: Int) =
-        val errorMapper = indexFieldError("lines", index)
-        toValidatedOrderLine(unvalidatedOrderLine).mapError(es => es.map(errorMapper))
+        val errorMapper = indexFieldError(field, index)
+        ZIO.logSpan(s"validate-$field-$index") {
+          toValidatedOrderLine(unvalidatedOrderLine)
+            .mapError(es => es.map(errorMapper))
+            .foldZIO(
+              e => ZIO.log(s"Error $e") *> ZIO.fail(e),
+              line => ZIO.log(s"Valid $line") *> ZIO.succeed(line)
+            )
+        }
+
       (for
         nonEmptyLines   <- ensureNotNullNotEmpty
         linesValidation <- ZIO.collectAllPar(nonEmptyLines.zipWithIndex.map(vol))
       yield linesValidation).either
 
-    (for
-      shippingAddressFiber <-
-        toCheckedAddress("shippingAddress", unvalidated.shippingAddress).either.fork
-      billingAddressFiber  <-
-        toCheckedAddress("billingAddress", unvalidated.billingAddress).either.fork
-      linesFiber           <- lines.fork
-      shippingAddress      <- shippingAddressFiber.join.debug(" shipping address validation: ")
-      billingAddress       <- billingAddressFiber.join.debug(" billing address validation: ")
-      lines                <- linesFiber.join.debug("lines validation:")
-      validatedOrder       <- Validation
-                                .validateWith(
-                                  orderId,
-                                  customerInfo,
-                                  shippingAddress.toValidation,
-                                  billingAddress.toValidation,
-                                  lines.toValidation
-                                )(ValidatedOrder.apply)
-                                .toZIOWithAllErrors
-    yield validatedOrder).mapError(PlaceOrderError.ValidationFailure.apply)
+    type EitherNEC[A] = Either[NonEmptyChunk[ValidationError], A]
+    def assemble(
+      shippingAddress: EitherNEC[Address],
+      billingAddress: EitherNEC[Address],
+      lines: EitherNEC[NonEmptyChunk[ValidatedOrderLine]]
+    ) =
+      val orderId      = makeOrderId.requiredField("orderId", unvalidated.orderId)
+      val customerInfo = (toCustomerInfo(_: UnvalidatedCustomerInfo).toValidation)
+        .requiredField("customerInfo", unvalidated.unvalidatedCustomerInfo)
+      Validation
+        .validateWith(
+          orderId,
+          customerInfo,
+          shippingAddress.toValidation,
+          billingAddress.toValidation,
+          lines.toValidation
+        )(ValidatedOrder.apply)
+
+    ZIO.logSpan(s"validateOrder-${unvalidated.orderId}") {
+      (for
+        shippingAddressFiber <-
+          toCheckedAddress("shippingAddress", unvalidated.shippingAddress).either.fork
+        billingAddressFiber  <-
+          toCheckedAddress("billingAddress", unvalidated.billingAddress).either.fork
+        linesFiber           <- lines("line").fork
+        shippingAddress      <- shippingAddressFiber.join
+        billingAddress       <- billingAddressFiber.join
+        lines                <- linesFiber.join
+        validatedOrder       <- assemble(shippingAddress, billingAddress, lines).toZIOWithAllErrors
+        _                    <- ZIO.log(s"Valid ${validatedOrder.orderId}")
+      yield validatedOrder).mapError(PlaceOrderError.ValidationFailure.apply)
+    }
 
 private object ValidatePlacedOrder:
 

@@ -1,7 +1,7 @@
 package io.gitlab.routis.dmmf.ordertaking.pub.internal
 
-import zio.prelude.Validation
 import zio.NonEmptyChunk
+import zio.prelude.Validation
 
 object Validations:
 
@@ -75,14 +75,3 @@ object Validations:
 
   extension [E, A](either: EitherV[E, A])
     def toValidation: Validation[E, A] = Validation.fromEitherNonEmptyChunk(either)
-
-  object SmartConstructorF:
-    extension [F[_, _], A, E, B](smartConstructor: SmartConstructor[A, E, B])(using
-      errorContainer: zio.prelude.Equivalence[F[ValidationError, B], Validation[ValidationError, B]]
-    )
-      def requiredField(field: FieldName, fieldValue: A): F[ValidationError, B] =
-        errorContainer.from(Validations.requiredField(field, fieldValue, smartConstructor))
-
-      def optionalField(field: FieldName, fieldValue: A): F[ValidationError, Option[B]] =
-        Validations.optionalField(field, fieldValue, smartConstructor)
-        ???

@@ -24,6 +24,7 @@ object App extends zio.ZIOAppDefault:
       addressLine2 = " ".repeat(60)
     )
 
+  private val line                              = UnvalidatedOrderLine("ol1", "G123", 10)
   private val order                             =
     UnvalidatedOrder(
       orderId = "oId123",
@@ -31,12 +32,15 @@ object App extends zio.ZIOAppDefault:
         UnvalidatedCustomerInfo("Babis", "Routis", "babis@yahoo.com", "Normal"),
       shippingAddress = ethnikisAntistaseos,
       billingAddress = ethnikisAntistaseos,
-      // lines = List(UnvalidatedOrderLine("ol1", "G123", 10)),
-      lines = List.empty,
+      lines = List(line, line.copy(quantity = -10)),
+      // lines = List.empty,
       promotionCode = null
     )
-  val checkAddressExists: CheckAddressExists    = u => ZIO.succeed(CheckedAddress(u))
-  val productCodeExists: CheckProductCodeExists = pc => ZIO.succeed(value(pc) == "G123")
+  import zio.given
+  val checkAddressExists: CheckAddressExists    = u =>
+    ZIO.succeed(CheckedAddress(u)).delay(100.millisecond)
+  val productCodeExists: CheckProductCodeExists = pc =>
+    ZIO.succeed(value(pc) == "G123").delay(100.millisecond)
 
   // noinspection TypeAnnotation
   override def run =
