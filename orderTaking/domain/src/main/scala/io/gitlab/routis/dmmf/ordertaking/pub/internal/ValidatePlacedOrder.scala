@@ -40,12 +40,12 @@ private[internal] case class ValidatePlacedOrder(
         .mapError(nestErrors(field))
     def ensureNotNull                            = Validation.fromOptionWith(missingField(field))(Option(unvalidatedAddress))
 
-    ZIO.logSpan(s"toCheckAddress-${field}") {
+    ZIO.logSpan(s"${field}") {
       for
         _              <- ensureNotNull.toZIOWithAllErrors
         checkedAddress <- check
         address        <- validate(checkedAddress)
-        _              <- ZIO.log(s"Valid $address")
+        _              <- ZIO.log("Valid")
       yield address
     }
 
@@ -114,12 +114,12 @@ private[internal] case class ValidatePlacedOrder(
         .toZIOWithAllErrors
       def vol(unvalidatedOrderLine: UnvalidatedOrderLine, index: Int) =
         val errorMapper = indexFieldError(field, index)
-        ZIO.logSpan(s"validate-$field-$index") {
+        ZIO.logSpan(s"$field-$index") {
           toValidatedOrderLine(unvalidatedOrderLine)
             .mapError(es => es.map(errorMapper))
             .foldZIO(
-              e => ZIO.log(s"Error $e") *> ZIO.fail(e),
-              line => ZIO.log(s"Valid $line") *> ZIO.succeed(line)
+              e => ZIO.log("Error") *> ZIO.fail(e),
+              line => ZIO.log("Valid") *> ZIO.succeed(line)
             )
         }
 
@@ -157,7 +157,7 @@ private[internal] case class ValidatePlacedOrder(
         billingAddress       <- billingAddressFiber.join
         lines                <- linesFiber.join
         validatedOrder       <- assemble(shippingAddress, billingAddress, lines).toZIOWithAllErrors
-        _                    <- ZIO.log(s"Valid ${validatedOrder.orderId}")
+        _                    <- ZIO.log("Valid")
       yield validatedOrder).mapError(PlaceOrderError.ValidationFailure.apply)
     }
 
