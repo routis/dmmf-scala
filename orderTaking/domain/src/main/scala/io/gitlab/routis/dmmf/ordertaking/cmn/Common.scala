@@ -1,5 +1,7 @@
 package io.gitlab.routis.dmmf.ordertaking.cmn
 
+import io.gitlab.routis
+import io.gitlab.routis.dmmf
 import io.gitlab.routis.dmmf.ordertaking
 import io.gitlab.routis.dmmf.ordertaking.cmn
 import io.gitlab.routis.dmmf.ordertaking.cmn.Common.{ ProductCode, VipStatus }
@@ -9,16 +11,35 @@ import java.util.Currency
 
 object Common:
   import zio.prelude.Assertion.*
+  import zio.prelude.newtypes.Sum
   import zio.prelude.{ Assertion, Newtype, Subtype, Validation }
 
   import scala.util.{ matching, Try }
+
+  def makeEmailAddress(u: String): Validation[String, EmailAddress] = EmailAddress.make(u)
+
+  def makeString50(u: String): Validation[String, String50] = String50.make(u)
+
+  def makeZipCode(u: String): Validation[String, ZipCode] = ZipCode.make(u)
+
+  def makeVipCode(u: String): Validation[String, VipStatus] = VipStatus.make(u)
+
+  def makeProductCode(u: String): Validation[String, ProductCode] = ProductCode.make(u)
+
+  def makeOrderQuantity(productCode: ProductCode)(
+    quantity: Double
+  ): Validation[String, OrderQuantity] =
+    OrderQuantity.forProduct(productCode)(quantity)
+  def makeOrderId(u: String): Validation[String, OrderId] = OrderId.make(u)
+
+  def makeOrderLineId(u: String): Validation[String, OrderLineId] = OrderLineId.make(u)
 
   //
   // Simple types
   //
 
   object EmailAddress extends Subtype[String]:
-    private val regex: matching.Regex                = "\\AW\\d{4}\\z".r
+    private val regex: matching.Regex                = "^(.+)@(.+)$".r
     override inline def assertion: Assertion[String] =
       matches(regex)
   type EmailAddress = EmailAddress.Type
@@ -26,16 +47,14 @@ object Common:
   class String50 private (val value: String) extends AnyVal:
     override def toString = s"$value"
   object String50:
+
     def make(value: String): Validation[String, String50] =
       if value.length <= 50 then Validation.succeed(new String50(value))
       else Validation.fail("Value exceeds 50")
 
   object ZipCode extends Subtype[String]:
-    private val regex: matching.Regex = "^\\d{5}$".r
-
-    override inline def assertion: Assertion[String] =
-      matches(regex)
-
+    private val regex: matching.Regex                = "^\\d{5}$".r
+    override inline def assertion: Assertion[String] = matches(regex)
   type ZipCode = String
 
   enum VipStatus extends java.lang.Enum[VipStatus]:
@@ -48,9 +67,30 @@ object Common:
         case _        => None
       Validation.fromOptionWith("Not a valid VipStatus")(res)
 
-  enum ProductCode:
-    case Widget(value: String) extends ProductCode
-    case Gizmo(value: String) extends ProductCode
+  object Widget extends Subtype[String]:
+    override inline def assertion: Assertion[String] =
+      matches("\\AW\\d{4}\\z".r)
+  type Widget = Widget.Type
+  object Gizmo  extends Subtype[String]:
+    override inline def assertion: Assertion[String] =
+      matches("\\AG\\d{3}\\z".r)
+  type Gizmo = Gizmo.Type
+
+  sealed trait ProductCode
+  object ProductCode:
+    case class GizmoCode(gizmo: Gizmo) extends ProductCode
+
+    case class WidgetCode(widget: Widget) extends ProductCode
+    def value(productCode: ProductCode): String              =
+      productCode match
+        case GizmoCode(gizmo)   => Gizmo.unwrap(gizmo)
+        case WidgetCode(widget) => Widget.unwrap(widget)
+    def make(value: String): Validation[String, ProductCode] =
+      Widget
+        .make(value)
+        .map(WidgetCode.apply)
+        .orElse(Gizmo.make(value).map(GizmoCode.apply))
+        .mapError(_ => "Neither Widget nor Gizmo")
 
   object Kilograms extends Subtype[Double]:
     override inline def assertion: Assertion[Double] =
@@ -63,23 +103,19 @@ object Common:
 
   type Units = Units.Type
 
-  enum OrderQuantity:
-    case KilogramsQ(quantity: Kilograms) extends OrderQuantity
-    case UnitsQ(quantity: Units) extends OrderQuantity
-
+  type OrderQuantity = Kilograms | Units
   object OrderQuantity:
-
-    def make(productCode: ProductCode, value: Double): Validation[String, OrderQuantity] =
+    def forProduct(productCode: ProductCode)(value: Double): Validation[String, OrderQuantity] =
       productCode match
-        case _: ProductCode.Gizmo  =>
-          Kilograms.make(value).map(KilogramsQ.apply(_))
-        case _: ProductCode.Widget =>
-          Units.make(value.intValue()).map(UnitsQ.apply(_))
+        case _: ProductCode.GizmoCode  =>
+          Kilograms.make(value)
+        case _: ProductCode.WidgetCode =>
+          Units.make(value.intValue())
 
-    def value(orderQuantity: OrderQuantity): Double =
+    inline def value(orderQuantity: OrderQuantity): Double =
       orderQuantity match
-        case KilogramsQ(k) => Kilograms.unwrap(k)
-        case UnitsQ(u)     => Units.unwrap(u).toDouble
+        case Kilograms(k) => k
+        case Units(u)     => u.toDouble
 
   object PromotionCode extends Newtype[String]
 
@@ -94,7 +130,7 @@ object Common:
   type OrderLineId = OrderLineId.Type
 
   type Price         = BigDecimal
-  type BillingAmount = BigDecimal
+  type BillingAmount = zio.prelude.newtypes.Sum[BigDecimal]
 
   //
   // Compound types
@@ -134,3 +170,4 @@ object Common:
   @main
   def test(): Unit =
     println(MoneyUtils.makeEuroAmount(100.004))
+    println(ProductCode.make("G123"))

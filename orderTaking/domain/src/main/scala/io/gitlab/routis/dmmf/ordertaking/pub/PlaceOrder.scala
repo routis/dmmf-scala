@@ -1,4 +1,5 @@
-package io.gitlab.routis.dmmf.ordertaking.cmn
+package io.gitlab.routis.dmmf.ordertaking.pub
+
 import zio.{ IO, ZIO }
 
 trait PlaceOrder:
@@ -34,15 +35,7 @@ object PlaceOrder:
     promotionCode: String
   )
 
-  import io.gitlab.routis.dmmf.ordertaking.cmn.Common.{
-    Address,
-    BillingAmount,
-    EmailAddress,
-    OrderId,
-    OrderQuantity,
-    ProductCode,
-    PromotionCode
-  }
+  import io.gitlab.routis.dmmf.ordertaking.cmn.Common.*
 
   case class ShippableOrderLine(productCode: ProductCode, quantity: OrderQuantity)
 
@@ -66,10 +59,8 @@ object PlaceOrder:
 
   end PlaceOrderEvents
 
-  import Validations.ValidationError
+  import io.gitlab.routis.dmmf.ordertaking.pub.internal.Validations.ValidationError
   enum PlaceOrderError:
-
-    case ValidationFailure(errors: zio.prelude.NonEmptyList[ValidationError])
-        extends PlaceOrderError
+    case ValidationFailure(errors: zio.NonEmptyChunk[ValidationError]) extends PlaceOrderError
     case PricingError(cause: String) extends PlaceOrderError
   end PlaceOrderError
