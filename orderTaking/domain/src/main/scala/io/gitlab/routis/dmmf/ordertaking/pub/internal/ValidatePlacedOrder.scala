@@ -6,11 +6,11 @@ import io.gitlab.routis.dmmf.ordertaking.pub.internal.PlaceOrderLive.{
   ValidatedOrder,
   ValidatedOrderLine
 }
+import io.gitlab.routis.dmmf.ordertaking.pub.internal.ValidatePlacedOrder.*
 import io.gitlab.routis.dmmf.ordertaking.pub.internal.ValidatePlacedOrder.CheckAddressExists.{
   AddressValidationError,
   CheckedAddress
 }
-import io.gitlab.routis.dmmf.ordertaking.pub.internal.ValidatePlacedOrder.*
 import io.gitlab.routis.dmmf.ordertaking.pub.internal.Validations.*
 import zio.prelude.Validation
 import zio.{ IO, NonEmptyChunk, UIO, URLayer, ZIO }
@@ -103,42 +103,42 @@ private[internal] case class ValidatePlacedOrder(
   def validateOrder(
     unvalidated: UnvalidatedOrder
   ): IO[PlaceOrderError.ValidationFailure, ValidatedOrder] =
-    type EitherVV[A] = Either[NonEmptyChunk[ValidationError], A]
-    def continue(
-      shippingAddress: EitherVV[Address],
-      billingAddress: EitherVV[Address],
-      lines: List[ValidatedOrderLine]
-    ) =
-      val orderId          = makeOrderId.requiredField("orderId", unvalidated.orderId)
-      val makeCustomerInfo =
-        toCustomerInfo(_: UnvalidatedCustomerInfo).toValidation
-      val customerInfo     =
-        makeCustomerInfo.requiredField("customerInfo", unvalidated.unvalidatedCustomerInfo)
-      Validation
-        .validateWith(
-          orderId,
-          customerInfo,
-          shippingAddress.toValidation,
-          billingAddress.toValidation,
-          Validation.succeed(lines)
-        )(ValidatedOrder.apply)
-        .toEither
 
-    def vol(unvalidatedOrderLine: UnvalidatedOrderLine, index: Int) =
-      val errorMapper = indexFieldError("lines", index)
-      toValidatedOrderLine(unvalidatedOrderLine).mapError(es => es.map(errorMapper))
+    val orderId      = makeOrderId.requiredField("orderId", unvalidated.orderId)
+    val customerInfo = (toCustomerInfo(_: UnvalidatedCustomerInfo).toValidation)
+      .requiredField("customerInfo", unvalidated.unvalidatedCustomerInfo)
+
+    def lines =
+      val maybeLines                                                  = Option(unvalidated.lines).flatMap(NonEmptyChunk.fromIterableOption)
+      val ensureNotNullNotEmpty                                       = Validation
+        .fromOptionWith(fieldError("lines")(ValidationError.Cause("Missing or empty")))(maybeLines)
+        .toZIOWithAllErrors
+      def vol(unvalidatedOrderLine: UnvalidatedOrderLine, index: Int) =
+        val errorMapper = indexFieldError("lines", index)
+        toValidatedOrderLine(unvalidatedOrderLine).mapError(es => es.map(errorMapper))
+      (for
+        nonEmptyLines   <- ensureNotNullNotEmpty
+        linesValidation <- ZIO.collectAllPar(nonEmptyLines.zipWithIndex.map(vol))
+      yield linesValidation).either
 
     (for
       shippingAddressFiber <-
         toCheckedAddress("shippingAddress", unvalidated.shippingAddress).either.fork
       billingAddressFiber  <-
         toCheckedAddress("billingAddress", unvalidated.billingAddress).either.fork
-      // TODO Fix NPE when lines = null
-      linesFiber           <- ZIO.collectAllPar(unvalidated.lines.zipWithIndex.map(vol)).fork
-      shippingAddress      <- shippingAddressFiber.join
-      billingAddress       <- billingAddressFiber.join
-      lines                <- linesFiber.join
-      validatedOrder       <- ZIO.fromEither(continue(shippingAddress, billingAddress, lines))
+      linesFiber           <- lines.fork
+      shippingAddress      <- shippingAddressFiber.join.debug(" shipping address validation: ")
+      billingAddress       <- billingAddressFiber.join.debug(" billing address validation: ")
+      lines                <- linesFiber.join.debug("lines validation:")
+      validatedOrder       <- Validation
+                                .validateWith(
+                                  orderId,
+                                  customerInfo,
+                                  shippingAddress.toValidation,
+                                  billingAddress.toValidation,
+                                  lines.toValidation
+                                )(ValidatedOrder.apply)
+                                .toZIOWithAllErrors
     yield validatedOrder).mapError(PlaceOrderError.ValidationFailure.apply)
 
 private object ValidatePlacedOrder:

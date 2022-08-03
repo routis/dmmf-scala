@@ -35,7 +35,7 @@ object PlaceOrderLive:
     customerInfo: CustomerInfo,
     shippingAddress: Address,
     billingAddress: Address,
-    lines: List[ValidatedOrderLine]
+    lines: NonEmptyChunk[ValidatedOrderLine]
   )
 
   private[internal] trait Validate:

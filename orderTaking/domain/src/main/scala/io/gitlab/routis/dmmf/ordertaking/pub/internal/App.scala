@@ -31,7 +31,8 @@ object App extends zio.ZIOAppDefault:
         UnvalidatedCustomerInfo("Babis", "Routis", "babis@yahoo.com", "Normal"),
       shippingAddress = ethnikisAntistaseos,
       billingAddress = ethnikisAntistaseos,
-      lines = List(UnvalidatedOrderLine("ol1", "G123", 10)),
+      // lines = List(UnvalidatedOrderLine("ol1", "G123", 10)),
+      lines = List.empty,
       promotionCode = null
     )
   val checkAddressExists: CheckAddressExists    = u => ZIO.succeed(CheckedAddress(u))
