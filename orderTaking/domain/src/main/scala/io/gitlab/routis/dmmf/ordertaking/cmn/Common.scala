@@ -22,7 +22,7 @@ object Common:
 
   def makeZipCode(u: String): Validation[String, ZipCode] = ZipCode.make(u)
 
-  def makeVipCode(u: String): Validation[String, VipStatus] = VipStatus.make(u)
+  def makeVipStatus(u: String): Validation[String, VipStatus] = VipStatus.make(u)
 
   def makeProductCode(u: String): Validation[String, ProductCode] = ProductCode.make(u)
 
@@ -55,7 +55,7 @@ object Common:
   object ZipCode extends Subtype[String]:
     private val regex: matching.Regex                = "^\\d{5}$".r
     override inline def assertion: Assertion[String] = matches(regex)
-  type ZipCode = String
+  type ZipCode = ZipCode.Type
 
   enum VipStatus extends java.lang.Enum[VipStatus]:
     case Normal, Vip

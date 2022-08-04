@@ -2,16 +2,18 @@ package io.gitlab.routis.dmmf.ordertaking.pub.internal
 
 import io.gitlab.routis.dmmf.ordertaking.cmn.Common.*
 import io.gitlab.routis.dmmf.ordertaking.pub.PlaceOrder.*
+import io.gitlab.routis.dmmf.ordertaking.pub.{ CheckAddressExists, CheckProductCodeExists }
 import io.gitlab.routis.dmmf.ordertaking.pub.internal.PlaceOrderLive.{
   ValidatedOrder,
   ValidatedOrderLine
 }
 import io.gitlab.routis.dmmf.ordertaking.pub.internal.ValidatePlacedOrder.*
-import io.gitlab.routis.dmmf.ordertaking.pub.internal.ValidatePlacedOrder.CheckAddressExists.{
+import io.gitlab.routis.dmmf.ordertaking.pub.CheckAddressExists.{
   AddressValidationError,
   CheckedAddress
 }
 import io.gitlab.routis.dmmf.ordertaking.pub.internal.Validations.*
+import io.gitlab.routis.dmmf.ordertaking.pub.internal.Validations.ValidationError.*
 import zio.prelude.Validation
 import zio.{ IO, NonEmptyChunk, UIO, URLayer, ZIO }
 
@@ -136,7 +138,7 @@ private[internal] case class ValidatePlacedOrder(
     ) =
       val orderId      = makeOrderId.requiredField("orderId", unvalidated.orderId)
       val customerInfo = (toCustomerInfo(_: UnvalidatedCustomerInfo).toValidation)
-        .requiredField("customerInfo", unvalidated.unvalidatedCustomerInfo)
+        .requiredField("customerInfo", unvalidated.customerInfo)
       Validation
         .validateWith(
           orderId,
@@ -168,7 +170,7 @@ private object ValidatePlacedOrder:
   ): Either[NonEmptyChunk[ValidationError], CustomerInfo] =
     val personalName = toPersonalName(unvalidated.firstName, unvalidated.lastName).toValidation
     val emailAddress = makeEmailAddress.requiredField("emailAddress", unvalidated.emailAddress)
-    val vipStatus    = makeVipCode.requiredField("vipStatus", unvalidated.vipStatus)
+    val vipStatus    = makeVipStatus.requiredField("vipStatus", unvalidated.vipStatus)
     Validation
       .validateWith(personalName, emailAddress, vipStatus)(CustomerInfo.apply)
       .toEither
@@ -196,24 +198,3 @@ private object ValidatePlacedOrder:
     Validation
       .validateWith(firstName, lastName)(PersonalName.apply)
       .toEither
-
-  //
-  //
-  //
-  trait CheckProductCodeExists:
-    def check(productCode: ProductCode): UIO[Boolean]
-
-  //
-  //
-  //
-  trait CheckAddressExists:
-
-    import CheckAddressExists.*
-
-    def check(unvalidatedAddress: UnvalidatedAddress): IO[AddressValidationError, CheckedAddress]
-
-  object CheckAddressExists:
-    case class CheckedAddress(unvalidatedAddress: UnvalidatedAddress)
-
-    enum AddressValidationError:
-      case InvalidFormat, AddressNotFound

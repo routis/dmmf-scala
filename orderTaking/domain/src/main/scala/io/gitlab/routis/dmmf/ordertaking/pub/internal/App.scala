@@ -2,17 +2,15 @@ package io.gitlab.routis.dmmf.ordertaking.pub.internal
 
 import io.gitlab.routis.dmmf.ordertaking.cmn.Common.ProductCode.value
 import io.gitlab.routis.dmmf.ordertaking.dto.ValidationErrorDto
+import io.gitlab.routis.dmmf.ordertaking.pub.CheckProductCodeExists
 import io.gitlab.routis.dmmf.ordertaking.pub.PlaceOrder.{
   UnvalidatedAddress,
   UnvalidatedCustomerInfo,
   UnvalidatedOrder,
   UnvalidatedOrderLine
 }
-import io.gitlab.routis.dmmf.ordertaking.pub.internal.ValidatePlacedOrder.CheckAddressExists.CheckedAddress
-import io.gitlab.routis.dmmf.ordertaking.pub.internal.ValidatePlacedOrder.{
-  CheckAddressExists,
-  CheckProductCodeExists
-}
+import io.gitlab.routis.dmmf.ordertaking.pub.CheckAddressExists.CheckedAddress
+import io.gitlab.routis.dmmf.ordertaking.pub.CheckAddressExists
 import zio.ZIO
 
 object App extends zio.ZIOAppDefault:
@@ -28,7 +26,7 @@ object App extends zio.ZIOAppDefault:
   private val order                             =
     UnvalidatedOrder(
       orderId = "oId123",
-      unvalidatedCustomerInfo =
+      customerInfo =
         UnvalidatedCustomerInfo("Babis", "Routis", "babis@yahoo.com", "Normal"),
       shippingAddress = ethnikisAntistaseos,
       billingAddress = ethnikisAntistaseos,

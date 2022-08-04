@@ -1,6 +1,6 @@
 package io.gitlab.routis.dmmf.ordertaking.pub
 
-import zio.{ IO, ZIO, NonEmptyChunk }
+import zio.{ IO, NonEmptyChunk, ZIO }
 
 trait PlaceOrder:
   import PlaceOrder.{ PlaceOrderError, PlaceOrderEvents, UnvalidatedOrder }
@@ -28,7 +28,7 @@ object PlaceOrder:
 
   case class UnvalidatedOrder(
     orderId: String,
-    unvalidatedCustomerInfo: UnvalidatedCustomerInfo,
+    customerInfo: UnvalidatedCustomerInfo,
     shippingAddress: UnvalidatedAddress,
     billingAddress: UnvalidatedAddress,
     lines: List[UnvalidatedOrderLine],
