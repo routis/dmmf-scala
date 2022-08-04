@@ -1,19 +1,19 @@
 package io.gitlab.routis.dmmf.ordertaking.pub.internal
 
 import io.gitlab.routis.dmmf.ordertaking.cmn.Common.*
+import io.gitlab.routis.dmmf.ordertaking.pub.CheckAddressExists.{
+  AddressValidationError,
+  CheckedAddress
+}
 import io.gitlab.routis.dmmf.ordertaking.pub.PlaceOrder.*
-import io.gitlab.routis.dmmf.ordertaking.pub.{ CheckAddressExists, CheckProductCodeExists }
 import io.gitlab.routis.dmmf.ordertaking.pub.internal.PlaceOrderLive.{
   ValidatedOrder,
   ValidatedOrderLine
 }
 import io.gitlab.routis.dmmf.ordertaking.pub.internal.ValidatePlacedOrder.*
-import io.gitlab.routis.dmmf.ordertaking.pub.CheckAddressExists.{
-  AddressValidationError,
-  CheckedAddress
-}
 import io.gitlab.routis.dmmf.ordertaking.pub.internal.Validations.*
 import io.gitlab.routis.dmmf.ordertaking.pub.internal.Validations.ValidationError.*
+import io.gitlab.routis.dmmf.ordertaking.pub.{ CheckAddressExists, CheckProductCodeExists }
 import zio.prelude.Validation
 import zio.{ IO, NonEmptyChunk, UIO, URLayer, ZIO }
 
@@ -22,66 +22,53 @@ private[internal] case class ValidatePlacedOrder(
   checkProductCodeExists: CheckProductCodeExists
 ) extends PlaceOrderLive.Validate:
 
-  def toCheckedAddress(
+  private def toCheckedAddress(
     field: FieldName,
-    unvalidatedAddress: UnvalidatedAddress
-  ): IO[NonEmptyChunk[ValidationError], Address] =
+    address: UnvalidatedAddress
+  ): AsyncValidation[ValidationError, Address] =
 
-    def check = checkAddressExists.check(unvalidatedAddress) mapError { e =>
+    def toValidationErrors(e: AddressValidationError): NonEmptyChunk[ValidationError] =
       val description = e match
-        case AddressValidationError.AddressNotFound =>
-          ValidationError.Cause("Address not found")
-        case AddressValidationError.InvalidFormat   =>
-          ValidationError.Cause("Address invalid format")
-      NonEmptyChunk.single(fieldError(field)(description))
-    }
+        case AddressValidationError.AddressNotFound => "Address not found"
+        case AddressValidationError.InvalidFormat   => "Address invalid format"
+      NonEmptyChunk.single(fieldError(field, description))
 
-    def validate(checkedAddress: CheckedAddress) =
-      ZIO
-        .fromEither(toAddress(checkedAddress))
-        .mapError(nestErrors(field))
-    def ensureNotNull                            = Validation.fromOptionWith(missingField(field))(Option(unvalidatedAddress))
-
-    ZIO.logSpan(s"${field}") {
+    ZIO.logSpan(s"$field") {
       for
-        _              <- ensureNotNull.toZIOWithAllErrors
-        checkedAddress <- check
-        address        <- validate(checkedAddress)
+        present        <- ensurePresent(field, address).toAsync
+        checkedAddress <- checkAddressExists.check(present).mapError(toValidationErrors)
+        validAddress   <- toAddress.nest(field)(checkedAddress).toAsync
         _              <- ZIO.log("Valid")
-      yield address
+      yield validAddress
     }
 
-  def toProductCode(
+  private def toProductCode(
     field: FieldName,
     unvalidated: String
-  ): IO[NonEmptyChunk[ValidationError], ProductCode] =
+  ): AsyncValidation[ValidationError, ProductCode] =
 
     def exists(productCode: ProductCode) =
-      checkProductCodeExists
-        .check(productCode)
-        .flatMap(exists =>
-          if exists then ZIO.succeed(productCode)
-          else
-            ZIO.fail(
-              NonEmptyChunk
-                .single(fieldError(field)(ValidationError.Cause(s"Doesn't exist $productCode")))
-            )
+      ZIO
+        .ifZIO(checkProductCodeExists.check(productCode))(
+          onTrue = ZIO.succeed(productCode),
+          onFalse = ZIO.fail(
+            NonEmptyChunk
+              .single(fieldError(field, s"Doesn't exist $productCode"))
+          )
         )
 
-    def validate = makeProductCode.requiredField(field, unvalidated).toZIOWithAllErrors
-
     for
-      productCode     <- validate
+      productCode     <- makeProductCode.requiredField(field, unvalidated).toAsync
       existingProduct <- exists(productCode)
     yield existingProduct
 
-  def toValidatedOrderLine(
+  private def toValidatedOrderLine(
     unvalidated: UnvalidatedOrderLine
-  ): IO[NonEmptyChunk[ValidationError], ValidatedOrderLine] =
+  ): AsyncValidation[ValidationError, ValidatedOrderLine] =
     type EitherVV[A] = Either[NonEmptyChunk[ValidationError], A]
-    def sync(
+    def assemble(
       maybeProductCode: EitherVV[ProductCode]
-    ): Either[NonEmptyChunk[ValidationError], ValidatedOrderLine] =
+    ): Validation[ValidationError, ValidatedOrderLine] =
       val orderLineId =
         OrderLineId.make.requiredField("orderLineId", unvalidated.orderLineId)
 
@@ -97,12 +84,10 @@ private[internal] case class ValidatePlacedOrder(
       val quantity    = quantityConstructor.requiredField("quantity", unvalidated.quantity)
       Validation
         .validateWith(orderLineId, productCode, quantity)(ValidatedOrderLine.apply)
-        .toEither
 
     for
-      productCode <-
-        toProductCode(field = "productCode", unvalidated = unvalidated.productCode).either
-      orderLine   <- ZIO.fromEither(sync(productCode))
+      productCode <- toProductCode("productCode", unvalidated.productCode).either
+      orderLine   <- assemble(productCode).toAsync
     yield orderLine
 
   def validateOrder(
@@ -112,8 +97,8 @@ private[internal] case class ValidatePlacedOrder(
     def lines(field: FieldName) =
       val maybeLines                                                  = Option(unvalidated.lines).flatMap(NonEmptyChunk.fromIterableOption)
       val ensureNotNullNotEmpty                                       = Validation
-        .fromOptionWith(fieldError(field)(ValidationError.Cause("Missing or empty")))(maybeLines)
-        .toZIOWithAllErrors
+        .fromOptionWith(fieldError(field, "Missing or empty"))(maybeLines)
+        .toAsync
       def vol(unvalidatedOrderLine: UnvalidatedOrderLine, index: Int) =
         val errorMapper = indexFieldError(field, index)
         ZIO.logSpan(s"$field-$index") {
@@ -137,8 +122,7 @@ private[internal] case class ValidatePlacedOrder(
       lines: EitherNEC[NonEmptyChunk[ValidatedOrderLine]]
     ) =
       val orderId      = makeOrderId.requiredField("orderId", unvalidated.orderId)
-      val customerInfo = (toCustomerInfo(_: UnvalidatedCustomerInfo).toValidation)
-        .requiredField("customerInfo", unvalidated.customerInfo)
+      val customerInfo = toCustomerInfo.requiredField("customerInfo", unvalidated.customerInfo)
       Validation
         .validateWith(
           orderId,
@@ -158,7 +142,7 @@ private[internal] case class ValidatePlacedOrder(
         shippingAddress      <- shippingAddressFiber.join
         billingAddress       <- billingAddressFiber.join
         lines                <- linesFiber.join
-        validatedOrder       <- assemble(shippingAddress, billingAddress, lines).toZIOWithAllErrors
+        validatedOrder       <- assemble(shippingAddress, billingAddress, lines).toAsync
         _                    <- ZIO.log("Valid")
       yield validatedOrder).mapError(PlaceOrderError.ValidationFailure.apply)
     }
@@ -166,35 +150,33 @@ private[internal] case class ValidatePlacedOrder(
 private object ValidatePlacedOrder:
 
   def toCustomerInfo(
-    unvalidated: UnvalidatedCustomerInfo
-  ): Either[NonEmptyChunk[ValidationError], CustomerInfo] =
-    val personalName = toPersonalName(unvalidated.firstName, unvalidated.lastName).toValidation
-    val emailAddress = makeEmailAddress.requiredField("emailAddress", unvalidated.emailAddress)
-    val vipStatus    = makeVipStatus.requiredField("vipStatus", unvalidated.vipStatus)
+    customerInfo: UnvalidatedCustomerInfo
+  ): Validation[ValidationError, CustomerInfo] =
     Validation
-      .validateWith(personalName, emailAddress, vipStatus)(CustomerInfo.apply)
-      .toEither
+      .validateWith(
+        toPersonalName(customerInfo.firstName, customerInfo.lastName),
+        makeEmailAddress.requiredField("emailAddress", customerInfo.emailAddress),
+        makeVipStatus.requiredField("vipStatus", customerInfo.vipStatus)
+      )(CustomerInfo.apply)
 
-  def toAddress(checkedAddress: CheckedAddress): Either[NonEmptyChunk[ValidationError], Address] =
-    val unvalidated  = checkedAddress.unvalidatedAddress
-    val addressLine1 = makeString50.requiredField("addressLine1", unvalidated.addressLine1)
-    val addressLine2 = makeString50.optionalField("addressLine2", unvalidated.addressLine2)
-    val addressLine3 = makeString50.optionalField("addressLine3", unvalidated.addressLine3)
-    val addressLine4 = makeString50.optionalField("addressLine4", unvalidated.addressLine4)
-    val city         = makeString50.requiredField("city", unvalidated.city)
-    val zipCode      = makeZipCode.requiredField("zipCode", unvalidated.zipCode)
+  def toAddress(checkedAddress: CheckedAddress): Validation[ValidationError, Address] =
+    val addr = checkedAddress.unvalidatedAddress
     Validation
-      .validateWith(addressLine1, addressLine2, addressLine3, addressLine4, city, zipCode)(
-        Address.apply
-      )
-      .toEither
+      .validateWith(
+        makeString50.requiredField("addressLine1", addr.addressLine1),
+        makeString50.optionalField("addressLine2", addr.addressLine2),
+        makeString50.optionalField("addressLine3", addr.addressLine3),
+        makeString50.optionalField("addressLine4", addr.addressLine4),
+        makeString50.requiredField("city", addr.city),
+        makeZipCode.requiredField("zipCode", addr.zipCode)
+      )(Address.apply)
 
   def toPersonalName(
-    unvalidatedFirstName: String,
-    unvalidatedLastName: String
-  ): Either[NonEmptyChunk[ValidationError], PersonalName] =
-    val firstName = makeString50.requiredField("firstName", unvalidatedFirstName)
-    val lastName  = makeString50.requiredField("lastName", unvalidatedLastName)
+    firstName: String,
+    lastName: String
+  ): Validation[ValidationError, PersonalName] =
     Validation
-      .validateWith(firstName, lastName)(PersonalName.apply)
-      .toEither
+      .validateWith(
+        makeString50.requiredField("firstName", firstName),
+        makeString50.requiredField("lastName", lastName)
+      )(PersonalName.apply)

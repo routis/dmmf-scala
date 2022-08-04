@@ -18,31 +18,39 @@ object Validations:
     type FieldName = String
     val missing: ValidationError = Cause("Missing")
 
-    def fieldError(field: FieldName): ValidationError => ValidationError = error =>
+    def fieldError(field: FieldName, error: Any): ValidationError         =
+      val validationError = error match
+        case ve: ValidationError => ve
+        case str: String         => Cause(str)
+        case _                   => Cause(error.toString)
+
+      FieldError(field, validationError)
+    def nestToField(field: FieldName): ValidationError => ValidationError = error =>
       FieldError(field, error)
 
-    def missingField(field: FieldName): ValidationError = fieldError(field)(missing)
-
-    def nestErrors(
-      field: FieldName
-    ): NonEmptyChunk[ValidationError] => NonEmptyChunk[ValidationError] =
-      _.map(fieldError(field))
+    private def missingField(field: FieldName): ValidationError = nestToField(field)(missing)
 
     def indexFieldError(listName: FieldName, index: Int): ValidationError => ValidationError =
       error => ValidationError.IndexedFieldError(listName, index, error)
 
-    private def causeOf(any: Any): ValidationError =
-      any match
-        case ve: ValidationError => ve
-        case str: String         => Cause(str)
-        case _                   => Cause(any.toString)
-
     import SmartConstructor.{ changeError, optional, required }
+
+    def ensurePresentOption[A](
+      fieldName: FieldName,
+      optionA: Option[A]
+    ): Validation[ValidationError, A] =
+      Validation.fromEither(optionA.toRight(missingField(fieldName)))
+    def ensurePresent[A](fieldName: FieldName, a: A): Validation[ValidationError, A] =
+      ensurePresentOption(fieldName, Option(a))
+
     extension [A, E, B](smartConstructor: SmartConstructor[A, E, B])
+
+      def nest(fieldName: FieldName): SmartConstructor[A, ValidationError, B] =
+        smartConstructor.changeError(fieldError(fieldName, _))
 
       def requiredFieldFromOption(field: FieldName, oa: Option[A]): Validation[ValidationError, B] =
         smartConstructor
-          .changeError(e => fieldError(field)(causeOf(e)))
+          .changeError(fieldError(field, _))
           .required(missingField(field))(oa)
 
       def requiredField(field: FieldName, a: A): Validation[ValidationError, B] =
@@ -52,7 +60,7 @@ object Validations:
         field: FieldName,
         optionA: Option[A]
       ): Validation[ValidationError, Option[B]] =
-        smartConstructor.changeError(e => fieldError(field)(causeOf(e))).optional(optionA)
+        smartConstructor.changeError(fieldError(field, _)).optional(optionA)
 
       def optionalField(field: FieldName, a: A): Validation[ValidationError, Option[B]] =
         optionalFieldFromOption(field, Option(a))
@@ -78,8 +86,10 @@ object Validations:
             case None    => Validation.succeed(None)
   end SmartConstructor
 
+  type AsyncValidation[E, A] = zio.IO[NonEmptyChunk[E], A]
+
   extension [E, A](v: Validation[E, A])
-    def toZIOWithAllErrors: zio.IO[zio.NonEmptyChunk[E], A] =
+    def toAsync: AsyncValidation[E, A] =
       zio.ZIO.fromEither(v.toEither)
 
   extension [E, A](either: Either[NonEmptyChunk[E], A])
