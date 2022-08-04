@@ -1,7 +1,11 @@
 package io.gitlab.routis.dmmf.ordertaking.pub.internal
 
+import io.gitlab.routis.dmmf.ordertaking.pub.internal.Validations.ValidationError.{
+  indexFieldError,
+  missingField
+}
 import zio.NonEmptyChunk
-import zio.prelude.Validation
+import zio.prelude.{ Validation, ZValidation }
 
 object Validations:
 
@@ -18,13 +22,13 @@ object Validations:
     type FieldName = String
     val missing: ValidationError = Cause("Missing")
 
-    def fieldError(field: FieldName, error: Any): ValidationError         =
-      val validationError = error match
+    private def causeOf(error: Any): ValidationError                      =
+      error match
         case ve: ValidationError => ve
         case str: String         => Cause(str)
         case _                   => Cause(error.toString)
-
-      FieldError(field, validationError)
+    def fieldError(field: FieldName, error: Any): ValidationError         =
+      FieldError(field, causeOf(error))
     def nestToField(field: FieldName): ValidationError => ValidationError = error =>
       FieldError(field, error)
 
@@ -64,10 +68,27 @@ object Validations:
 
       def optionalField(field: FieldName, a: A): Validation[ValidationError, Option[B]] =
         optionalFieldFromOption(field, Option(a))
+
+      def nonEmptyChunkField(
+        fieldName: FieldName,
+        as: Iterable[A]
+      ): Validation[ValidationError, NonEmptyChunk[B]] =
+        val notNullAs = Option(as).fold(Iterable.empty[A])(identity)
+        val maybeNEC  =
+          NonEmptyChunk.fromIterableOption(notNullAs).toRight(missingField(fieldName))
+        Validation
+          .fromEither(maybeNEC)
+          .flatMap(nec =>
+            Validation.validateAll(nec.zipWithIndex.map { (a, index) =>
+              smartConstructor.changeError(causeOf.andThen(indexFieldError(fieldName, index)))(a)
+            })
+          )
+
   end ValidationError
 
   type SmartConstructor[A, E, B] = A => Validation[E, B]
   object SmartConstructor:
+
     extension [A, E, B](smartConstructor: SmartConstructor[A, E, B])
 
       def changeError[E1](f: E => E1): SmartConstructor[A, E1, B] =
@@ -78,12 +99,14 @@ object Validations:
           optionA match
             case Some(a) => smartConstructor(a)
             case None    => Validation.fail(ifMissing)
-
-      def optional: SmartConstructor[Option[A], E, Option[B]] =
+      def requiredNullable(ifMissing: => E): SmartConstructor[A, E, B] =
+        a => required(ifMissing)(Option(a))
+      def optional: SmartConstructor[Option[A], E, Option[B]]          =
         optionA =>
           optionA match
             case Some(a) => smartConstructor(a).map(Some.apply)
             case None    => Validation.succeed(None)
+
   end SmartConstructor
 
   type AsyncValidation[E, A] = zio.IO[NonEmptyChunk[E], A]

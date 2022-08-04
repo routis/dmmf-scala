@@ -33,7 +33,7 @@ private[internal] case class ValidatePlacedOrder(
         case AddressValidationError.InvalidFormat   => "Address invalid format"
       NonEmptyChunk.single(fieldError(field, description))
 
-    ZIO.logSpan(s"$field") {
+    ZIO.logSpan("validateAddress") {
       for
         present        <- ensurePresent(field, address).toAsync
         checkedAddress <- checkAddressExists.check(present).mapError(toValidationErrors)
@@ -96,18 +96,19 @@ private[internal] case class ValidatePlacedOrder(
 
     def lines(field: FieldName) =
       val maybeLines                                                  = Option(unvalidated.lines).flatMap(NonEmptyChunk.fromIterableOption)
-      val ensureNotNullNotEmpty                                       = Validation
-        .fromOptionWith(fieldError(field, "Missing or empty"))(maybeLines)
-        .toAsync
+      val ensureNotNullNotEmpty                                       =
+        Validation.fromOptionWith(fieldError(field, "Missing or empty"))(maybeLines).toAsync
       def vol(unvalidatedOrderLine: UnvalidatedOrderLine, index: Int) =
         val errorMapper = indexFieldError(field, index)
-        ZIO.logSpan(s"$field-$index") {
-          toValidatedOrderLine(unvalidatedOrderLine)
-            .mapError(es => es.map(errorMapper))
-            .foldZIO(
-              e => ZIO.log("Error") *> ZIO.fail(e),
-              line => ZIO.log("Valid") *> ZIO.succeed(line)
-            )
+        ZIO.logSpan("validateOrderLine") {
+          ZIO.logAnnotate("index", s"$index") {
+            toValidatedOrderLine(unvalidatedOrderLine)
+              .mapError(es => es.map(errorMapper))
+              .foldZIO(
+                e => ZIO.log("Error") *> ZIO.fail(e),
+                line => ZIO.log("Valid") *> ZIO.succeed(line)
+              )
+          }
         }
 
       (for
@@ -132,19 +133,21 @@ private[internal] case class ValidatePlacedOrder(
           lines.toValidation
         )(ValidatedOrder.apply)
 
-    ZIO.logSpan(s"validateOrder-${unvalidated.orderId}") {
-      (for
-        shippingAddressFiber <-
-          toCheckedAddress("shippingAddress", unvalidated.shippingAddress).either.fork
-        billingAddressFiber  <-
-          toCheckedAddress("billingAddress", unvalidated.billingAddress).either.fork
-        linesFiber           <- lines("line").fork
-        shippingAddress      <- shippingAddressFiber.join
-        billingAddress       <- billingAddressFiber.join
-        lines                <- linesFiber.join
-        validatedOrder       <- assemble(shippingAddress, billingAddress, lines).toAsync
-        _                    <- ZIO.log("Valid")
-      yield validatedOrder).mapError(PlaceOrderError.ValidationFailure.apply)
+    ZIO.logSpan("validateOrder") {
+      ZIO.logAnnotate("orderId", unvalidated.orderId) {
+        (for
+          shippingAddressFiber <-
+            toCheckedAddress("shippingAddress", unvalidated.shippingAddress).either.fork
+          billingAddressFiber  <-
+            toCheckedAddress("billingAddress", unvalidated.billingAddress).either.fork
+          linesFiber           <- lines("line").fork
+          shippingAddress      <- shippingAddressFiber.join
+          billingAddress       <- billingAddressFiber.join
+          lines                <- linesFiber.join
+          validatedOrder       <- assemble(shippingAddress, billingAddress, lines).toAsync
+          _                    <- ZIO.log("Valid")
+        yield validatedOrder).mapError(PlaceOrderError.ValidationFailure.apply)
+      }
     }
 
 private object ValidatePlacedOrder:
