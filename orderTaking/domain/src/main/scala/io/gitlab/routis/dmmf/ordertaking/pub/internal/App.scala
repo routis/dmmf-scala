@@ -10,7 +10,7 @@ import io.gitlab.routis.dmmf.ordertaking.pub.PlaceOrder.{
 }
 import io.gitlab.routis.dmmf.ordertaking.pub.CheckAddressExists.CheckedAddress
 import io.gitlab.routis.dmmf.ordertaking.pub.CheckAddressExists
-import io.gitlab.routis.dmmf.ordertaking.Application.Dto.ValidationErrorDto
+import io.gitlab.routis.dmmf.ordertaking.Application.Dto.{ PlaceOrderErrorDto, ValidationErrorDto }
 import zio.ZIO
 
 object App extends zio.ZIOAppDefault:
@@ -26,13 +26,13 @@ object App extends zio.ZIOAppDefault:
       customerInfo = UnvalidatedCustomerInfo("Babis", "Routis", "babis@yahoo.com", "Normal"),
       shippingAddress = ethnikisAntistaseos,
       billingAddress = ethnikisAntistaseos,
-      lines = List(line, line.copy(quantity = -10)),
+      lines = List(line),
       // lines = List.empty,
       promotionCode = null
     )
   import zio.given
-  val checkAddressExists: CheckAddressExists    = u => ZIO.succeed(CheckedAddress(u)).delay(1000.millisecond)
-  val productCodeExists: CheckProductCodeExists = pc => ZIO.succeed(value(pc) == "G123").delay(1200.millisecond)
+  val checkAddressExists: CheckAddressExists    = u => ZIO.succeed(CheckedAddress(u)).delay(100.millisecond)
+  val productCodeExists: CheckProductCodeExists = pc => ZIO.succeed(value(pc) == "G123").delay(120.millisecond)
 
   // noinspection TypeAnnotation
   override def run =
@@ -41,5 +41,5 @@ object App extends zio.ZIOAppDefault:
       ValidatePlacedOrder(checkAddressExists, productCodeExists)
     placeOrder
       .validateOrder(order)
-      .mapError(ValidationErrorDto.fromDomain)
+      .mapError(PlaceOrderErrorDto.fromDomain)
       .debug("here")

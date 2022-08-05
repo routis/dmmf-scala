@@ -8,37 +8,38 @@ import io.gitlab.routis.dmmf.ordertaking.pub.internal.ValidatePlacedOrder.*
 import io.gitlab.routis.dmmf.ordertaking.pub.internal.Validations.*
 import io.gitlab.routis.dmmf.ordertaking.pub.internal.Validations.ValidationError.*
 import io.gitlab.routis.dmmf.ordertaking.pub.{ CheckAddressExists, CheckProductCodeExists }
-import zio.prelude.Validation
+import zio.prelude.*
 import zio.{ IO, NonEmptyChunk, UIO, URLayer, ZIO }
+
+import scala.util.Either
 
 private[internal] case class ValidatePlacedOrder(
   checkAddressExists: CheckAddressExists,
   checkProductCodeExists: CheckProductCodeExists
 ) extends PlaceOrderLive.Validate:
 
-  private def toCheckedAddress(
-    field: FieldName,
-    address: UnvalidatedAddress
-  ): AsyncValidation[ValidationError, Address] =
+  import ValidatePlacedOrder.DomainValidation
 
-    def toValidationErrors(e: AddressValidationError): NonEmptyChunk[ValidationError] =
+  private def toCheckedAddress(field: FieldName, address: UnvalidatedAddress): UIO[DomainValidation[Address]] =
+
+    def toValidationErrors(e: AddressValidationError): ValidationError =
       val description = e match
         case AddressValidationError.AddressNotFound => "Address not found"
         case AddressValidationError.InvalidFormat   => "Address invalid format"
-      NonEmptyChunk.single(fieldError(field, description))
+      fieldError(field, description)
 
     ZIO.logSpan("validateAddress") {
-      for
-        present        <- ensurePresent(field, address).toAsync
-        checkedAddress <- checkAddressExists.check(present).mapError(toValidationErrors)
-        validAddress   <- toAddress.nest(field)(checkedAddress).toAsync
+      (for
+        present        <- ensurePresent(field, address).toIO
+        checkedAddress <- checkAddressExists.check(present).mapError(e => NonEmptyChunk.single(toValidationErrors(e)))
+        validAddress   <- toAddress.nest(field)(checkedAddress).toIO
         _              <- ZIO.log("Valid")
-      yield validAddress
+      yield validAddress).uioValidation
     }
 
-  private def toProductCode(field: FieldName, unvalidated: String): AsyncValidation[ValidationError, ProductCode] =
+  private def toProductCode(field: FieldName, unvalidated: String): UIO[DomainValidation[ProductCode]] =
 
-    def exists(productCode: ProductCode) =
+    def exists(productCode: ProductCode): IO[NonEmptyChunk[ValidationError], ProductCode] =
       ZIO
         .ifZIO(checkProductCodeExists.check(productCode))(
           onTrue = ZIO.succeed(productCode),
@@ -48,117 +49,119 @@ private[internal] case class ValidatePlacedOrder(
           )
         )
 
-    for
-      productCode     <- makeProductCode.requiredField(field, unvalidated).toAsync
+    (for
+      productCode     <- makeProductCode.requiredField(field, unvalidated).toIO
       existingProduct <- exists(productCode)
-    yield existingProduct
+    yield existingProduct).uioValidation
 
-  private def toValidatedOrderLine(
-    unvalidated: UnvalidatedOrderLine
-  ): AsyncValidation[ValidationError, ValidatedOrderLine] =
-    type EitherVV[A] = Either[NonEmptyChunk[ValidationError], A]
-    def assemble(maybeProductCode: EitherVV[ProductCode]): Validation[ValidationError, ValidatedOrderLine] =
-      val orderLineId =
-        makeOrderLineId.requiredField("orderLineId", unvalidated.orderLineId)
+  private def toValidatedOrderLines(
+    lines: List[UnvalidatedOrderLine]
+  ): UIO[DomainValidation[NonEmptyChunk[ValidatedOrderLine]]] =
 
-      // if maybeProductCode is left then whatever the quantity we return failed
-      // otherwise we check the quantity
-      val quantityConstructor: SmartConstructor[Double, String, OrderQuantity] =
-        maybeProductCode.fold(
-          _ => _ => Validation.fail("Cannot be validated due to invalid product code"),
-          pc => OrderQuantity.forProduct(pc)
-        )
+    val field: FieldName = "lines"
 
-      val productCode = maybeProductCode.toValidation
-      val quantity    = quantityConstructor.requiredField("quantity", unvalidated.quantity)
-      Validation
-        .validateWith(orderLineId, productCode, quantity)(ValidatedOrderLine.apply)
+    def validateOrderLine(
+      unvalidatedOrderLine: UnvalidatedOrderLine,
+      index: Int
+    ): UIO[DomainValidation[ValidatedOrderLine]] =
 
-    for
-      productCode <- toProductCode("productCode", unvalidated.productCode).either
-      orderLine   <- assemble(productCode).toAsync
-    yield orderLine
+      val lineValidation =
+        (for
+          productCode <- toProductCode("productCode", unvalidatedOrderLine.productCode)
+          orderLine   <- toValidatedOrderLine(unvalidatedOrderLine, productCode).toIO
+        yield orderLine)
+          .mapError(es => es.map(indexFieldError(field, index)))
+      lineValidation.uioValidation
+    end validateOrderLine
+
+    val ensureNotNullNotEmpty: DomainValidation[NonEmptyChunk[UnvalidatedOrderLine]] =
+      val maybeLines = Option(lines).flatMap(NonEmptyChunk.fromIterableOption)
+      Validation.fromOptionWith(fieldError(field, "Missing or empty"))(maybeLines)
+
+    ensureNotNullNotEmpty.fold(
+      failure = es => ZIO.succeed(Validation.failNonEmptyChunk(es)),
+      success = nonEmptyLines =>
+        ZIO
+          .collectAllPar(nonEmptyLines.zipWithIndex.map(validateOrderLine))
+          .map(Validation.validateAll)
+    )
+
+  end toValidatedOrderLines
 
   def validateOrder(unvalidated: UnvalidatedOrder): IO[PlaceOrderError.ValidationFailure, ValidatedOrder] =
 
-    def lines(field: FieldName) =
-      val maybeLines = Option(unvalidated.lines).flatMap(NonEmptyChunk.fromIterableOption)
-      val ensureNotNullNotEmpty =
-        Validation.fromOptionWith(fieldError(field, "Missing or empty"))(maybeLines).toAsync
-      def vol(unvalidatedOrderLine: UnvalidatedOrderLine, index: Int) =
-        val errorMapper = indexFieldError(field, index)
-        ZIO.logSpan("validateOrderLine") {
-          ZIO.logAnnotate("index", s"$index") {
-            toValidatedOrderLine(unvalidatedOrderLine)
-              .mapError(es => es.map(errorMapper))
-              .foldZIO(e => ZIO.log("Error") *> ZIO.fail(e), line => ZIO.log("Valid") *> ZIO.succeed(line))
-          }
-        }
-
-      (for
-        nonEmptyLines   <- ensureNotNullNotEmpty
-        linesValidation <- ZIO.collectAllPar(nonEmptyLines.zipWithIndex.map(vol))
-      yield linesValidation).either
-
-    type EitherNEC[A] = Either[NonEmptyChunk[ValidationError], A]
-    def assemble(
-      shippingAddress: EitherNEC[Address],
-      billingAddress: EitherNEC[Address],
-      lines: EitherNEC[NonEmptyChunk[ValidatedOrderLine]]
-    ) =
-      val orderId      = makeOrderId.requiredField("orderId", unvalidated.orderId)
-      val customerInfo = toCustomerInfo.requiredField("customerInfo", unvalidated.customerInfo)
-      Validation
-        .validateWith(
-          orderId,
-          customerInfo,
-          shippingAddress.toValidation,
-          billingAddress.toValidation,
-          lines.toValidation
-        )(ValidatedOrder.apply)
+    val orderId      = makeOrderId.requiredField("orderId", unvalidated.orderId)
+    val customerInfo = toCustomerInfo.requiredField("customerInfo", unvalidated.customerInfo)
 
     ZIO.logSpan("validateOrder") {
       ZIO.logAnnotate("orderId", unvalidated.orderId) {
         (for
           shippingAddressFiber <-
-            toCheckedAddress("shippingAddress", unvalidated.shippingAddress).either.fork
+            toCheckedAddress("shippingAddress", unvalidated.shippingAddress).fork
           billingAddressFiber <-
-            toCheckedAddress("billingAddress", unvalidated.billingAddress).either.fork
-          linesFiber      <- lines("line").fork
+            toCheckedAddress("billingAddress", unvalidated.billingAddress).fork
+          linesFiber      <- toValidatedOrderLines(unvalidated.lines).fork
           shippingAddress <- shippingAddressFiber.join
           billingAddress  <- billingAddressFiber.join
           lines           <- linesFiber.join
-          validatedOrder  <- assemble(shippingAddress, billingAddress, lines).toAsync
           _               <- ZIO.log("Valid")
-        yield validatedOrder).mapError(PlaceOrderError.ValidationFailure.apply)
+        yield toValidatedOrder(orderId, customerInfo, shippingAddress, billingAddress, lines)).ioValidation
+          .mapError(PlaceOrderError.ValidationFailure.apply)
       }
     }
 
 private object ValidatePlacedOrder:
+  type DomainValidation[A] = Validation[ValidationError, A]
 
-  def toCustomerInfo(customerInfo: UnvalidatedCustomerInfo): Validation[ValidationError, CustomerInfo] =
+  def toValidatedOrder(
+    orderId: Validation[ValidationError, OrderId],
+    customerInfo: Validation[ValidationError, CustomerInfo],
+    shippingAddress: Validation[ValidationError, Address],
+    billingAddress: Validation[ValidationError, Address],
+    lines: Validation[ValidationError, NonEmptyChunk[ValidatedOrderLine]]
+  ): DomainValidation[ValidatedOrder] =
     Validation
-      .validateWith(
-        toPersonalName(customerInfo.firstName, customerInfo.lastName),
-        makeEmailAddress.requiredField("emailAddress", customerInfo.emailAddress),
-        makeVipStatus.requiredField("vipStatus", customerInfo.vipStatus)
-      )(CustomerInfo.apply)
+      .validateWith(orderId, customerInfo, shippingAddress, billingAddress, lines)(ValidatedOrder.apply)
 
-  def toAddress(checkedAddress: CheckedAddress): Validation[ValidationError, Address] =
+  def toValidatedOrderLine(
+    unvalidated: UnvalidatedOrderLine,
+    productCode: Validation[ValidationError, ProductCode]
+  ): DomainValidation[ValidatedOrderLine] =
+    val orderLineId =
+      makeOrderLineId.requiredField("orderLineId", unvalidated.orderLineId)
+
+    // if maybeProductCode is left then whatever the quantity we return failed
+    // otherwise we check the quantity
+    val quantityConstructor: SmartConstructor[Double, String, OrderQuantity] =
+      productCode.fold(
+        _ => _ => Validation.fail("Cannot be validated due to invalid product code"),
+        pc => OrderQuantity.forProduct(pc)
+      )
+
+    val quantity = quantityConstructor.requiredField("quantity", unvalidated.quantity)
+    Validation
+      .validateWith(orderLineId, productCode, quantity)(ValidatedOrderLine.apply)
+
+  def toCustomerInfo(customerInfo: UnvalidatedCustomerInfo): DomainValidation[CustomerInfo] =
+    makeCustomerInfo(
+      toPersonalName(customerInfo.firstName, customerInfo.lastName),
+      makeEmailAddress.requiredField("emailAddress", customerInfo.emailAddress),
+      makeVipStatus.requiredField("vipStatus", customerInfo.vipStatus)
+    )
+
+  def toAddress(checkedAddress: CheckedAddress): DomainValidation[Address] =
     val addr = checkedAddress.unvalidatedAddress
-    Validation
-      .validateWith(
-        makeString50.requiredField("addressLine1", addr.addressLine1),
-        makeString50.optionalField("addressLine2", addr.addressLine2),
-        makeString50.optionalField("addressLine3", addr.addressLine3),
-        makeString50.optionalField("addressLine4", addr.addressLine4),
-        makeString50.requiredField("city", addr.city),
-        makeZipCode.requiredField("zipCode", addr.zipCode)
-      )(Address.apply)
+    makeAddress(
+      makeString50.requiredField("addressLine1", addr.addressLine1),
+      makeString50.optionalField("addressLine2", addr.addressLine2),
+      makeString50.optionalField("addressLine3", addr.addressLine3),
+      makeString50.optionalField("addressLine4", addr.addressLine4),
+      makeString50.requiredField("city", addr.city),
+      makeZipCode.requiredField("zipCode", addr.zipCode)
+    )
 
-  def toPersonalName(firstName: String, lastName: String): Validation[ValidationError, PersonalName] =
-    Validation
-      .validateWith(
-        makeString50.requiredField("firstName", firstName),
-        makeString50.requiredField("lastName", lastName)
-      )(PersonalName.apply)
+  def toPersonalName(firstName: String, lastName: String): DomainValidation[PersonalName] =
+    makePersonalName(
+      makeString50.requiredField("firstName", firstName),
+      makeString50.requiredField("lastName", lastName)
+    )

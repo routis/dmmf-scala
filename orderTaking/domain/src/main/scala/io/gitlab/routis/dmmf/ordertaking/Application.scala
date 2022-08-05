@@ -123,15 +123,13 @@ object Application:
             val normalizedFieldName = s"$list[$index]$suffix"
             ValidationErrorDto(normalizedFieldName, nested.description)
 
-      def fromDomain(f: ValidationFailure): Array[ValidationErrorDto] =
-        f.errors.map(fromDomain).toArray
     end ValidationErrorDto
 
     import PlaceOrderErrorDto.Kind
 
     case class PlaceOrderErrorDto(
       kind: Kind,
-      validationFailureErrors: Array[ValidationErrorDto],
+      validationFailureErrors: List[ValidationErrorDto],
       pricingErrorCause: String
     )
     object PlaceOrderErrorDto:
@@ -141,7 +139,8 @@ object Application:
       def fromDomain(domain: PlaceOrderError): PlaceOrderErrorDto =
         domain match
           case PricingError(cause) => PlaceOrderErrorDto(kind = Kind.PriceError, null, cause)
-          case vf @ ValidationFailure(_) =>
-            PlaceOrderErrorDto(kind = Kind.ValidationFailure, ValidationErrorDto.fromDomain(vf), "")
+          case vf @ ValidationFailure(errors) =>
+            val errorDtos = errors.map(ValidationErrorDto.fromDomain)
+            PlaceOrderErrorDto(kind = Kind.ValidationFailure, errorDtos.toList, "")
     end PlaceOrderErrorDto
   end Dto

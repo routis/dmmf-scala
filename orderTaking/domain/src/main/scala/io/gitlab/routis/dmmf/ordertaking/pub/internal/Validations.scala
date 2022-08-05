@@ -1,9 +1,9 @@
 package io.gitlab.routis.dmmf.ordertaking.pub.internal
 
 import io.gitlab.routis.dmmf.ordertaking.pub.internal.Validations.ValidationError.{ indexFieldError, missingField }
-import zio.NonEmptyChunk
+import zio.{ IO, NonEmptyChunk, UIO }
 import zio.prelude.{ Validation, ZValidation }
-
+import io.gitlab.routis.dmmf.ordertaking.cmn.SmartConstructor
 object Validations:
 
   import ValidationError.FieldName
@@ -16,6 +16,7 @@ object Validations:
 
   object ValidationError:
     type FieldName = String
+
     val missing: ValidationError = Cause("Missing")
 
     private def causeOf(error: Any): ValidationError =
@@ -72,34 +73,11 @@ object Validations:
 
   end ValidationError
 
-  type SmartConstructor[A, E, B] = A => Validation[E, B]
-  object SmartConstructor:
+  extension [E, A](x: IO[NonEmptyChunk[E], A])
+    def uioValidation: UIO[Validation[E, A]] = x.either.map(Validation.fromEitherNonEmptyChunk)
 
-    extension [A, E, B](smartConstructor: SmartConstructor[A, E, B])
-
-      def changeError[E1](f: E => E1): SmartConstructor[A, E1, B] =
-        smartConstructor.andThen(_.mapError(f))
-
-      def required(ifMissing: => E): SmartConstructor[Option[A], E, B] =
-        optionA =>
-          optionA match
-            case Some(a) => smartConstructor(a)
-            case None    => Validation.fail(ifMissing)
-      def requiredNullable(ifMissing: => E): SmartConstructor[A, E, B] =
-        a => required(ifMissing)(Option(a))
-      def optional: SmartConstructor[Option[A], E, Option[B]] =
-        optionA =>
-          optionA match
-            case Some(a) => smartConstructor(a).map(Some.apply)
-            case None    => Validation.succeed(None)
-
-  end SmartConstructor
-
-  type AsyncValidation[E, A] = zio.IO[NonEmptyChunk[E], A]
+  extension [E, A](x: UIO[Validation[E, A]]) def ioValidation: IO[NonEmptyChunk[E], A] = x.flatMap(v => v.toIO)
 
   extension [E, A](v: Validation[E, A])
-    def toAsync: AsyncValidation[E, A] =
+    def toIO: zio.IO[NonEmptyChunk[E], A] =
       zio.ZIO.fromEither(v.toEither)
-
-  extension [E, A](either: Either[NonEmptyChunk[E], A])
-    def toValidation: Validation[E, A] = Validation.fromEitherNonEmptyChunk(either)
