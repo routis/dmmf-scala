@@ -24,4 +24,4 @@ object MoneyUtils:
 
   @main def test(): Unit =
     println(MoneyUtils.makeEuroAmount(100.004))
-    println(Common.ProductCode.make("G123"))
+    println(ProductCode.make("G123"))

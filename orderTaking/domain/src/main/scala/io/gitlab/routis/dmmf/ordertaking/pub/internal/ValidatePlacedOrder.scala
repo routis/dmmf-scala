@@ -1,6 +1,6 @@
 package io.gitlab.routis.dmmf.ordertaking.pub.internal
 
-import io.gitlab.routis.dmmf.ordertaking.cmn.Common.*
+import io.gitlab.routis.dmmf.ordertaking.cmn.*
 import io.gitlab.routis.dmmf.ordertaking.pub.CheckAddressExists.{ AddressValidationError, CheckedAddress }
 import io.gitlab.routis.dmmf.ordertaking.pub.PlaceOrder.*
 import io.gitlab.routis.dmmf.ordertaking.pub.internal.PlaceOrderLive.{ ValidatedOrder, ValidatedOrderLine }
@@ -59,7 +59,7 @@ private[internal] case class ValidatePlacedOrder(
     type EitherVV[A] = Either[NonEmptyChunk[ValidationError], A]
     def assemble(maybeProductCode: EitherVV[ProductCode]): Validation[ValidationError, ValidatedOrderLine] =
       val orderLineId =
-        OrderLineId.make.requiredField("orderLineId", unvalidated.orderLineId)
+        makeOrderLineId.requiredField("orderLineId", unvalidated.orderLineId)
 
       // if maybeProductCode is left then whatever the quantity we return failed
       // otherwise we check the quantity

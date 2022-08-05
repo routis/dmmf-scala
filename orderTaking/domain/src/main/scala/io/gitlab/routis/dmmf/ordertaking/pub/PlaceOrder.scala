@@ -30,7 +30,7 @@ object PlaceOrder:
     promotionCode: String
   )
 
-  import io.gitlab.routis.dmmf.ordertaking.cmn.Common.*
+  import io.gitlab.routis.dmmf.ordertaking.cmn.*
 
   case class ShippableOrderLine(productCode: ProductCode, quantity: OrderQuantity)
 

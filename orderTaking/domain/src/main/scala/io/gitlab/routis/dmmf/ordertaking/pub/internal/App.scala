@@ -1,6 +1,6 @@
 package io.gitlab.routis.dmmf.ordertaking.pub.internal
 
-import io.gitlab.routis.dmmf.ordertaking.cmn.Common.ProductCode.value
+import io.gitlab.routis.dmmf.ordertaking.cmn.ProductCode.value
 import io.gitlab.routis.dmmf.ordertaking.pub.CheckProductCodeExists
 import io.gitlab.routis.dmmf.ordertaking.pub.PlaceOrder.{
   UnvalidatedAddress,

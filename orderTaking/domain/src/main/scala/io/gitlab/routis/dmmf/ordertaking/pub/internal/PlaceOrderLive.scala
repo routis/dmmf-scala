@@ -1,7 +1,6 @@
 package io.gitlab.routis.dmmf.ordertaking.pub.internal
 
-import io.gitlab.routis.dmmf.ordertaking.cmn
-import io.gitlab.routis.dmmf.ordertaking.cmn.Common.*
+import io.gitlab.routis.dmmf.ordertaking.cmn.*
 import io.gitlab.routis.dmmf.ordertaking.pub.PlaceOrder.*
 import io.gitlab.routis.dmmf.ordertaking.pub.PlaceOrder.PlaceOrderError.PricingError
 import io.gitlab.routis.dmmf.ordertaking.pub.internal.PlaceOrderLive.*

@@ -11,7 +11,7 @@ trait Application:
 object Application:
   object Dto:
 
-    import io.gitlab.routis.dmmf.ordertaking.cmn.Common.*
+    import io.gitlab.routis.dmmf.ordertaking.cmn.*
     import io.gitlab.routis.dmmf.ordertaking.pub.PlaceOrder.*
     import io.gitlab.routis.dmmf.ordertaking.pub.internal.Validations.*
     import ValidationError.*
@@ -24,7 +24,7 @@ object Application:
           firstName = domain.name.fistName.value,
           lastName = domain.name.lastName.value,
           emailAddress = EmailAddress.unwrap(domain.emailAddress),
-          vipStatus = domain.vipStatus.name()
+          vipStatus = domain.vipStatus.name
         )
 
       extension (dto: CustomerInfoDto)
