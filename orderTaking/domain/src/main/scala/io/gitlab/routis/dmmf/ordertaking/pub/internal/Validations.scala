@@ -1,9 +1,6 @@
 package io.gitlab.routis.dmmf.ordertaking.pub.internal
 
-import io.gitlab.routis.dmmf.ordertaking.pub.internal.Validations.ValidationError.{
-  indexFieldError,
-  missingField
-}
+import io.gitlab.routis.dmmf.ordertaking.pub.internal.Validations.ValidationError.{ indexFieldError, missingField }
 import zio.NonEmptyChunk
 import zio.prelude.{ Validation, ZValidation }
 
@@ -13,24 +10,22 @@ object Validations:
   enum ValidationError:
     self =>
 
-    case Cause(description: String) extends ValidationError
-    case FieldError(field: FieldName, error: ValidationError) extends ValidationError
-    case IndexedFieldError(list: FieldName, index: Int, error: ValidationError)
-        extends ValidationError
+    case Cause(description: String)                                             extends ValidationError
+    case FieldError(field: FieldName, error: ValidationError)                   extends ValidationError
+    case IndexedFieldError(list: FieldName, index: Int, error: ValidationError) extends ValidationError
 
   object ValidationError:
     type FieldName = String
     val missing: ValidationError = Cause("Missing")
 
-    private def causeOf(error: Any): ValidationError                      =
+    private def causeOf(error: Any): ValidationError =
       error match
         case ve: ValidationError => ve
         case str: String         => Cause(str)
         case _                   => Cause(error.toString)
-    def fieldError(field: FieldName, error: Any): ValidationError         =
+    def fieldError(field: FieldName, error: Any): ValidationError =
       FieldError(field, causeOf(error))
-    def nestToField(field: FieldName): ValidationError => ValidationError = error =>
-      FieldError(field, error)
+    def nestToField(field: FieldName): ValidationError => ValidationError = error => FieldError(field, error)
 
     private def missingField(field: FieldName): ValidationError = nestToField(field)(missing)
 
@@ -39,10 +34,7 @@ object Validations:
 
     import SmartConstructor.{ changeError, optional, required }
 
-    def ensurePresentOption[A](
-      fieldName: FieldName,
-      optionA: Option[A]
-    ): Validation[ValidationError, A] =
+    def ensurePresentOption[A](fieldName: FieldName, optionA: Option[A]): Validation[ValidationError, A] =
       Validation.fromEither(optionA.toRight(missingField(fieldName)))
     def ensurePresent[A](fieldName: FieldName, a: A): Validation[ValidationError, A] =
       ensurePresentOption(fieldName, Option(a))
@@ -60,21 +52,15 @@ object Validations:
       def requiredField(field: FieldName, a: A): Validation[ValidationError, B] =
         requiredFieldFromOption(field, Option(a))
 
-      def optionalFieldFromOption(
-        field: FieldName,
-        optionA: Option[A]
-      ): Validation[ValidationError, Option[B]] =
+      def optionalFieldFromOption(field: FieldName, optionA: Option[A]): Validation[ValidationError, Option[B]] =
         smartConstructor.changeError(fieldError(field, _)).optional(optionA)
 
       def optionalField(field: FieldName, a: A): Validation[ValidationError, Option[B]] =
         optionalFieldFromOption(field, Option(a))
 
-      def nonEmptyChunkField(
-        fieldName: FieldName,
-        as: Iterable[A]
-      ): Validation[ValidationError, NonEmptyChunk[B]] =
+      def nonEmptyChunkField(fieldName: FieldName, as: Iterable[A]): Validation[ValidationError, NonEmptyChunk[B]] =
         val notNullAs = Option(as).fold(Iterable.empty[A])(identity)
-        val maybeNEC  =
+        val maybeNEC =
           NonEmptyChunk.fromIterableOption(notNullAs).toRight(missingField(fieldName))
         Validation
           .fromEither(maybeNEC)
@@ -101,7 +87,7 @@ object Validations:
             case None    => Validation.fail(ifMissing)
       def requiredNullable(ifMissing: => E): SmartConstructor[A, E, B] =
         a => required(ifMissing)(Option(a))
-      def optional: SmartConstructor[Option[A], E, Option[B]]          =
+      def optional: SmartConstructor[Option[A], E, Option[B]] =
         optionA =>
           optionA match
             case Some(a) => smartConstructor(a).map(Some.apply)

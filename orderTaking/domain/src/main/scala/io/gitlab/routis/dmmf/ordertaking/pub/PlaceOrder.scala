@@ -8,12 +8,7 @@ trait PlaceOrder:
 
 object PlaceOrder:
 
-  case class UnvalidatedCustomerInfo(
-    firstName: String,
-    lastName: String,
-    emailAddress: String,
-    vipStatus: String
-  )
+  case class UnvalidatedCustomerInfo(firstName: String, lastName: String, emailAddress: String, vipStatus: String)
 
   case class UnvalidatedAddress(
     addressLine1: String,
@@ -49,11 +44,8 @@ object PlaceOrder:
       promotionCode: PromotionCode
     ) extends PlaceOrderEvents
 
-    case BillableOrderPlaced(
-      orderId: OrderId,
-      billingAddress: Address,
-      billingAmount: BillingAmount
-    ) extends PlaceOrderEvents
+    case BillableOrderPlaced(orderId: OrderId, billingAddress: Address, billingAmount: BillingAmount)
+        extends PlaceOrderEvents
 
     case AcknowledgementSent(orderId: OrderId, emailAddress: EmailAddress) extends PlaceOrderEvents
 
@@ -62,5 +54,5 @@ object PlaceOrder:
   import io.gitlab.routis.dmmf.ordertaking.pub.internal.Validations.ValidationError
   enum PlaceOrderError:
     case ValidationFailure(errors: NonEmptyChunk[ValidationError]) extends PlaceOrderError
-    case PricingError(cause: String) extends PlaceOrderError
+    case PricingError(cause: String)                               extends PlaceOrderError
   end PlaceOrderError

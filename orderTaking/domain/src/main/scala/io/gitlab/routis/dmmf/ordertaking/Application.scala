@@ -17,12 +17,7 @@ object Application:
     import ValidationError.*
     import PlaceOrderError.{ PricingError, ValidationFailure }
 
-    case class CustomerInfoDto(
-      firstName: String,
-      lastName: String,
-      emailAddress: String,
-      vipStatus: String
-    )
+    case class CustomerInfoDto(firstName: String, lastName: String, emailAddress: String, vipStatus: String)
     object CustomerInfoDto:
       def fromDomain(domain: CustomerInfo): CustomerInfoDto =
         CustomerInfoDto(
@@ -33,7 +28,7 @@ object Application:
         )
 
       extension (dto: CustomerInfoDto)
-        def toUnvalidated: UnvalidatedCustomerInfo              =
+        def toUnvalidated: UnvalidatedCustomerInfo =
           UnvalidatedCustomerInfo(
             firstName = dto.firstName,
             lastName = dto.lastName,
@@ -74,7 +69,7 @@ object Application:
         )
 
       extension (dto: AddressDto)
-        def toUnvalidated: UnvalidatedAddress              =
+        def toUnvalidated: UnvalidatedAddress =
           UnvalidatedAddress(
             addressLine1 = dto.addressLine1,
             addressLine2 = dto.addressLine2,
@@ -116,8 +111,8 @@ object Application:
 
       def fromDomain(e: ValidationError): ValidationErrorDto =
         e match
-          case Cause(description)                    => ValidationErrorDto("", description)
-          case FieldError(fieldName, error)          =>
+          case Cause(description) => ValidationErrorDto("", description)
+          case FieldError(fieldName, error) =>
             val nested              = fromDomain(error)
             val suffix              = if nested.fieldName == "" then "" else s".${nested.fieldName}"
             val normalizedFieldName = s"$fieldName$suffix"
@@ -145,7 +140,7 @@ object Application:
 
       def fromDomain(domain: PlaceOrderError): PlaceOrderErrorDto =
         domain match
-          case PricingError(cause)       => PlaceOrderErrorDto(kind = Kind.PriceError, null, cause)
+          case PricingError(cause) => PlaceOrderErrorDto(kind = Kind.PriceError, null, cause)
           case vf @ ValidationFailure(_) =>
             PlaceOrderErrorDto(kind = Kind.ValidationFailure, ValidationErrorDto.fromDomain(vf), "")
     end PlaceOrderErrorDto

@@ -1,27 +1,27 @@
 import BuildHelper.stdSettings
 
-ThisBuild / scalaVersion := "3.1.3"
-ThisBuild / organization := "io.gitlab.routis.dmmf"
+ThisBuild / scalaVersion      := "3.1.3"
+ThisBuild / organization      := "io.gitlab.routis.dmmf"
+ThisBuild / semanticdbEnabled := true
+ThisBuild / semanticdbVersion := scalafixSemanticdb.revision
+
+addCommandAlias("fmt", "all scalafmtSbt scalafmt test:scalafmt")
+addCommandAlias("fix", "; all compile:scalafix test:scalafix; all scalafmtSbt scalafmtAll")
 
 lazy val orderTaking = (project in file("."))
   .aggregate(orderTakingDomain, orderTakingInfrastructure)
   .settings(stdSettings("dmmf"))
   .settings(publishArtifact := false, publish / skip := true, publishLocal / skip := true)
 
-
 lazy val orderTakingDomain = module("order-taking-domain", "orderTaking/domain/")
-  .settings(
-    libraryDependencies ++= Dependencies.coreDeps,
-    testFrameworks += Dependencies.coreTestingFramework
-  )
+  .settings(libraryDependencies ++= Dependencies.coreDeps, testFrameworks += Dependencies.coreTestingFramework)
 
 lazy val orderTakingInfrastructure =
   module("order-taking-infrastructure", "orderTaking/infrastructure")
     .aggregate(orderTakingInfrastructureDB)
     .settings(publishArtifact := false, publish / skip := true, publishLocal / skip := true)
 
-
-lazy val orderTakingInfrastructureDB                 =
+lazy val orderTakingInfrastructureDB =
   module("order-taking-infrastructure-db", "orderTaking/infrastructure/db")
     .dependsOn(`orderTakingDomain` % "compile->compile;test->test")
     .settings(

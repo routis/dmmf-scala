@@ -19,13 +19,13 @@ object Dependencies {
   lazy val coreDeps: Seq[ModuleID] = zio ++ jodaMoney
   lazy val coreTestingFramework    = new TestFramework("zio.test.sbt.ZTestFramework")
   // lazy val dbDeps: Seq[ModuleID]   = zioQuill ++ mariadb
-  lazy val dbDeps: Seq[ModuleID]   = mariadb
+  lazy val dbDeps: Seq[ModuleID] = mariadb
 
   lazy val dbTestingFramework = new TestFramework("zio.test.sbt.ZTestFramework")
 
   object versions {
 
-    val zio       = "2.0.0"
+    val zio = "2.0.0"
     // val zio_quill    = "3.12.0.Beta1.7"
     val mariadb   = "2.7.4"
     val prelude   = "1.0.0-RC15"

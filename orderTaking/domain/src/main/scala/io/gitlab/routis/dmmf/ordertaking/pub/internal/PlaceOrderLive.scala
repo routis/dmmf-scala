@@ -5,22 +5,15 @@ import io.gitlab.routis.dmmf.ordertaking.cmn.Common.*
 import io.gitlab.routis.dmmf.ordertaking.pub.PlaceOrder.*
 import io.gitlab.routis.dmmf.ordertaking.pub.PlaceOrder.PlaceOrderError.PricingError
 import io.gitlab.routis.dmmf.ordertaking.pub.internal.PlaceOrderLive.*
-import io.gitlab.routis.dmmf.ordertaking.pub.{
-  CheckAddressExists,
-  CheckProductCodeExists,
-  PlaceOrder
-}
+import io.gitlab.routis.dmmf.ordertaking.pub.{ CheckAddressExists, CheckProductCodeExists, PlaceOrder }
 import zio.{ IO, NonEmptyChunk, UIO, URLayer, ZIO }
 
 /**
- * The implementation of [PlaceOrder] Delegates validation to [Validate] which is implemented by
- * [ValidatePlacedOrder]
+ * The implementation of [PlaceOrder] Delegates validation to [Validate] which is implemented by [ValidatePlacedOrder]
  */
 private case class PlaceOrderLive(validator: Validate) extends PlaceOrder:
 
-  override def placeOrder(
-    unvalidatedOrder: UnvalidatedOrder
-  ): IO[PlaceOrderError, PlaceOrderEvents] =
+  override def placeOrder(unvalidatedOrder: UnvalidatedOrder): IO[PlaceOrderError, PlaceOrderEvents] =
     ???
 
 object PlaceOrderLive:
@@ -43,9 +36,7 @@ object PlaceOrderLive:
   )
 
   private[internal] trait Validate:
-    def validateOrder(
-      unvalidatedOrder: UnvalidatedOrder
-    ): IO[PlaceOrderError.ValidationFailure, ValidatedOrder]
+    def validateOrder(unvalidatedOrder: UnvalidatedOrder): IO[PlaceOrderError.ValidationFailure, ValidatedOrder]
 
   //
   // Pricing types and services

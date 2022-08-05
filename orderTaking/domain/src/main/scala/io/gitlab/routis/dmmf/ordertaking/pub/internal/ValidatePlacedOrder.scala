@@ -1,15 +1,9 @@
 package io.gitlab.routis.dmmf.ordertaking.pub.internal
 
 import io.gitlab.routis.dmmf.ordertaking.cmn.Common.*
-import io.gitlab.routis.dmmf.ordertaking.pub.CheckAddressExists.{
-  AddressValidationError,
-  CheckedAddress
-}
+import io.gitlab.routis.dmmf.ordertaking.pub.CheckAddressExists.{ AddressValidationError, CheckedAddress }
 import io.gitlab.routis.dmmf.ordertaking.pub.PlaceOrder.*
-import io.gitlab.routis.dmmf.ordertaking.pub.internal.PlaceOrderLive.{
-  ValidatedOrder,
-  ValidatedOrderLine
-}
+import io.gitlab.routis.dmmf.ordertaking.pub.internal.PlaceOrderLive.{ ValidatedOrder, ValidatedOrderLine }
 import io.gitlab.routis.dmmf.ordertaking.pub.internal.ValidatePlacedOrder.*
 import io.gitlab.routis.dmmf.ordertaking.pub.internal.Validations.*
 import io.gitlab.routis.dmmf.ordertaking.pub.internal.Validations.ValidationError.*
@@ -42,10 +36,7 @@ private[internal] case class ValidatePlacedOrder(
       yield validAddress
     }
 
-  private def toProductCode(
-    field: FieldName,
-    unvalidated: String
-  ): AsyncValidation[ValidationError, ProductCode] =
+  private def toProductCode(field: FieldName, unvalidated: String): AsyncValidation[ValidationError, ProductCode] =
 
     def exists(productCode: ProductCode) =
       ZIO
@@ -66,9 +57,7 @@ private[internal] case class ValidatePlacedOrder(
     unvalidated: UnvalidatedOrderLine
   ): AsyncValidation[ValidationError, ValidatedOrderLine] =
     type EitherVV[A] = Either[NonEmptyChunk[ValidationError], A]
-    def assemble(
-      maybeProductCode: EitherVV[ProductCode]
-    ): Validation[ValidationError, ValidatedOrderLine] =
+    def assemble(maybeProductCode: EitherVV[ProductCode]): Validation[ValidationError, ValidatedOrderLine] =
       val orderLineId =
         OrderLineId.make.requiredField("orderLineId", unvalidated.orderLineId)
 
@@ -90,13 +79,11 @@ private[internal] case class ValidatePlacedOrder(
       orderLine   <- assemble(productCode).toAsync
     yield orderLine
 
-  def validateOrder(
-    unvalidated: UnvalidatedOrder
-  ): IO[PlaceOrderError.ValidationFailure, ValidatedOrder] =
+  def validateOrder(unvalidated: UnvalidatedOrder): IO[PlaceOrderError.ValidationFailure, ValidatedOrder] =
 
     def lines(field: FieldName) =
-      val maybeLines                                                  = Option(unvalidated.lines).flatMap(NonEmptyChunk.fromIterableOption)
-      val ensureNotNullNotEmpty                                       =
+      val maybeLines = Option(unvalidated.lines).flatMap(NonEmptyChunk.fromIterableOption)
+      val ensureNotNullNotEmpty =
         Validation.fromOptionWith(fieldError(field, "Missing or empty"))(maybeLines).toAsync
       def vol(unvalidatedOrderLine: UnvalidatedOrderLine, index: Int) =
         val errorMapper = indexFieldError(field, index)
@@ -104,10 +91,7 @@ private[internal] case class ValidatePlacedOrder(
           ZIO.logAnnotate("index", s"$index") {
             toValidatedOrderLine(unvalidatedOrderLine)
               .mapError(es => es.map(errorMapper))
-              .foldZIO(
-                e => ZIO.log("Error") *> ZIO.fail(e),
-                line => ZIO.log("Valid") *> ZIO.succeed(line)
-              )
+              .foldZIO(e => ZIO.log("Error") *> ZIO.fail(e), line => ZIO.log("Valid") *> ZIO.succeed(line))
           }
         }
 
@@ -138,23 +122,21 @@ private[internal] case class ValidatePlacedOrder(
         (for
           shippingAddressFiber <-
             toCheckedAddress("shippingAddress", unvalidated.shippingAddress).either.fork
-          billingAddressFiber  <-
+          billingAddressFiber <-
             toCheckedAddress("billingAddress", unvalidated.billingAddress).either.fork
-          linesFiber           <- lines("line").fork
-          shippingAddress      <- shippingAddressFiber.join
-          billingAddress       <- billingAddressFiber.join
-          lines                <- linesFiber.join
-          validatedOrder       <- assemble(shippingAddress, billingAddress, lines).toAsync
-          _                    <- ZIO.log("Valid")
+          linesFiber      <- lines("line").fork
+          shippingAddress <- shippingAddressFiber.join
+          billingAddress  <- billingAddressFiber.join
+          lines           <- linesFiber.join
+          validatedOrder  <- assemble(shippingAddress, billingAddress, lines).toAsync
+          _               <- ZIO.log("Valid")
         yield validatedOrder).mapError(PlaceOrderError.ValidationFailure.apply)
       }
     }
 
 private object ValidatePlacedOrder:
 
-  def toCustomerInfo(
-    customerInfo: UnvalidatedCustomerInfo
-  ): Validation[ValidationError, CustomerInfo] =
+  def toCustomerInfo(customerInfo: UnvalidatedCustomerInfo): Validation[ValidationError, CustomerInfo] =
     Validation
       .validateWith(
         toPersonalName(customerInfo.firstName, customerInfo.lastName),
@@ -174,10 +156,7 @@ private object ValidatePlacedOrder:
         makeZipCode.requiredField("zipCode", addr.zipCode)
       )(Address.apply)
 
-  def toPersonalName(
-    firstName: String,
-    lastName: String
-  ): Validation[ValidationError, PersonalName] =
+  def toPersonalName(firstName: String, lastName: String): Validation[ValidationError, PersonalName] =
     Validation
       .validateWith(
         makeString50.requiredField("firstName", firstName),

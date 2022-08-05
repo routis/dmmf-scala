@@ -1,9 +1,5 @@
 package io.gitlab.routis.dmmf.ordertaking.cmn
 
-import io.gitlab.routis
-import io.gitlab.routis.dmmf
-import io.gitlab.routis.dmmf.ordertaking
-import io.gitlab.routis.dmmf.ordertaking.cmn
 import io.gitlab.routis.dmmf.ordertaking.cmn.Common.{ ProductCode, VipStatus }
 import org.joda.money.{ BigMoney, MoneyUtils }
 
@@ -16,30 +12,28 @@ object Common:
 
   import scala.util.{ matching, Try }
 
-  def makeEmailAddress(u: String): Validation[String, EmailAddress] = EmailAddress.make(u)
+  def makeEmailAddress(s: String): Validation[String, EmailAddress] = EmailAddress.make(s)
 
-  def makeString50(u: String): Validation[String, String50] = String50.make(u)
+  def makeString50(s: String): Validation[String, String50] = String50.make(s)
 
-  def makeZipCode(u: String): Validation[String, ZipCode] = ZipCode.make(u)
+  def makeZipCode(s: String): Validation[String, ZipCode] = ZipCode.make(s)
 
-  def makeVipStatus(u: String): Validation[String, VipStatus] = VipStatus.make(u)
+  def makeVipStatus(s: String): Validation[String, VipStatus] = VipStatus.make(s)
 
-  def makeProductCode(u: String): Validation[String, ProductCode] = ProductCode.make(u)
+  def makeProductCode(s: String): Validation[String, ProductCode] = ProductCode.make(s)
 
-  def makeOrderQuantity(productCode: ProductCode)(
-    quantity: Double
-  ): Validation[String, OrderQuantity] =
+  def makeOrderQuantity(productCode: ProductCode)(quantity: Double): Validation[String, OrderQuantity] =
     OrderQuantity.forProduct(productCode)(quantity)
-  def makeOrderId(u: String): Validation[String, OrderId] = OrderId.make(u)
+  def makeOrderId(s: String): Validation[String, OrderId] = OrderId.make(s)
 
-  def makeOrderLineId(u: String): Validation[String, OrderLineId] = OrderLineId.make(u)
+  def makeOrderLineId(s: String): Validation[String, OrderLineId] = OrderLineId.make(s)
 
   //
   // Simple types
   //
 
   object EmailAddress extends Subtype[String]:
-    private val regex: matching.Regex                = "^(.+)@(.+)$".r
+    private val regex: matching.Regex = "^(.+)@(.+)$".r
     override inline def assertion: Assertion[String] =
       matches(regex)
   type EmailAddress = EmailAddress.Type
@@ -71,7 +65,7 @@ object Common:
     override inline def assertion: Assertion[String] =
       matches("\\AW\\d{4}\\z".r)
   type Widget = Widget.Type
-  object Gizmo  extends Subtype[String]:
+  object Gizmo extends Subtype[String]:
     override inline def assertion: Assertion[String] =
       matches("\\AG\\d{3}\\z".r)
   type Gizmo = Gizmo.Type
@@ -81,7 +75,7 @@ object Common:
     case class GizmoCode(gizmo: Gizmo) extends ProductCode
 
     case class WidgetCode(widget: Widget) extends ProductCode
-    def value(productCode: ProductCode): String              =
+    def value(productCode: ProductCode): String =
       productCode match
         case GizmoCode(gizmo)   => Gizmo.unwrap(gizmo)
         case WidgetCode(widget) => Widget.unwrap(widget)
@@ -107,7 +101,7 @@ object Common:
   object OrderQuantity:
     def forProduct(productCode: ProductCode)(value: Double): Validation[String, OrderQuantity] =
       productCode match
-        case _: ProductCode.GizmoCode  =>
+        case _: ProductCode.GizmoCode =>
           Kilograms.make(value)
         case _: ProductCode.WidgetCode =>
           Units.make(value.intValue())
@@ -146,28 +140,4 @@ object Common:
 
   final case class PersonalName(fistName: String50, lastName: String50)
 
-  final case class CustomerInfo(
-    name: PersonalName,
-    emailAddress: EmailAddress,
-    vipStatus: VipStatus
-  )
-
-  object MoneyUtils:
-
-    def makeAmount(
-      currency: java.util.Currency,
-      amount: BigDecimal
-    ): zio.prelude.Validation[String, BigDecimal] =
-      import org.joda.money.{ CurrencyUnit as JodaCurrencyUnit, Money as JodaMoney }
-      Validation
-        .fromTry(Try(JodaMoney.of(JodaCurrencyUnit.of(currency), amount.bigDecimal)))
-        .mapError(t => s"Not a valid amount. ${t.getMessage}")
-        .map(_.getAmount)
-
-    def makeEuroAmount(amount: BigDecimal): zio.prelude.Validation[String, BigDecimal] =
-      makeAmount(Currency.getInstance("EUR"), amount)
-
-  @main
-  def test(): Unit =
-    println(MoneyUtils.makeEuroAmount(100.004))
-    println(ProductCode.make("G123"))
+  final case class CustomerInfo(name: PersonalName, emailAddress: EmailAddress, vipStatus: VipStatus)
