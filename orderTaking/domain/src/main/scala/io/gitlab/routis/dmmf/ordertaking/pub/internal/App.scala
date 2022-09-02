@@ -26,20 +26,22 @@ object App extends zio.ZIOAppDefault:
       customerInfo = UnvalidatedCustomerInfo("Babis", "Routis", "babis@yahoo.com", "Normal"),
       shippingAddress = ethnikisAntistaseos,
       billingAddress = ethnikisAntistaseos,
-      lines = List(line),
+      lines = List(line, line.copy(orderLineId = "old2", productCode = "W123")),
       // lines = List.empty,
       promotionCode = null
     )
   import zio.given
-  val checkAddressExists: CheckAddressExists    = u => ZIO.succeed(CheckedAddress(u)).delay(100.millisecond)
-  val productCodeExists: CheckProductCodeExists = pc => ZIO.succeed(value(pc) == "G123").delay(120.millisecond)
+
+  lazy val placeOrderSrv: ValidatePlacedOrder =
+    val checkAddressExists: CheckAddressExists    = u => ZIO.succeed(CheckedAddress(u)).delay(100.millisecond)
+    val productCodeExists: CheckProductCodeExists = pc => ZIO.succeed(value(pc) == "G123").delay(120.millisecond)
+    ValidatePlacedOrder(checkAddressExists, productCodeExists)
+
+  def placeOrder(unvalidatedOrder: UnvalidatedOrder): ZIO[Any, PlaceOrderErrorDto, PlaceOrderLive.ValidatedOrder] =
+    placeOrderSrv
+      .validateOrder(unvalidatedOrder)
+      .mapError(PlaceOrderErrorDto.fromDomain)
 
   // noinspection TypeAnnotation
   override def run =
-
-    val placeOrder: ValidatePlacedOrder =
-      ValidatePlacedOrder(checkAddressExists, productCodeExists)
-    placeOrder
-      .validateOrder(order)
-      .mapError(PlaceOrderErrorDto.fromDomain)
-      .debug("here")
+    placeOrder(order).either.debug("here")

@@ -2,12 +2,17 @@ package io.gitlab.routis.dmmf.ordertaking.pub
 
 import zio.{ IO, NonEmptyChunk, ZIO }
 
+/**
+ * A service for placing an order
+ */
 trait PlaceOrder:
   import PlaceOrder.{ PlaceOrderError, PlaceOrderEvents, UnvalidatedOrder }
   def placeOrder(unvalidatedOrder: UnvalidatedOrder): IO[PlaceOrderError, PlaceOrderEvents]
 
 object PlaceOrder:
 
+  // Types representing input of the place order (unvalidated order)
+  
   case class UnvalidatedCustomerInfo(firstName: String, lastName: String, emailAddress: String, vipStatus: String)
 
   case class UnvalidatedAddress(
@@ -29,6 +34,8 @@ object PlaceOrder:
     lines: List[UnvalidatedOrderLine],
     promotionCode: String
   )
+  
+  // Types representing the outcome of placing an order
 
   import io.gitlab.routis.dmmf.ordertaking.cmn.*
 
