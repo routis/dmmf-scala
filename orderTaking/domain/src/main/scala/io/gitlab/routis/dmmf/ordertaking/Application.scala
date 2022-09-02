@@ -14,7 +14,7 @@ object Application:
     import io.gitlab.routis.dmmf.ordertaking.cmn.*
     import io.gitlab.routis.dmmf.ordertaking.pub.PlaceOrder.*
     import io.gitlab.routis.dmmf.ordertaking.pub.internal.Validations.*
-    import ValidationError.*
+    import ValidationError.{ Cause, FieldError, IndexedFieldError }
     import PlaceOrderError.{ PricingError, ValidationFailure }
 
     case class CustomerInfoDto(firstName: String, lastName: String, emailAddress: String, vipStatus: String)

@@ -1,5 +1,6 @@
 package io.gitlab.routis.dmmf.ordertaking
 
+import io.gitlab.routis.dmmf.ordertaking.cmn.ValidationError.missingField
 import zio.prelude.Validation
 
 package object cmn:
@@ -59,26 +60,97 @@ package object cmn:
       .validateWith(name, emailAddress, vipStatus)(CustomerInfo.apply)
 
   //
+  // Validation Error
+  //
+
+  import ValidationError.FieldName
+
+  enum ValidationError:
+    self =>
+
+    case Cause(description: String)                                             extends ValidationError
+    case FieldError(field: FieldName, error: ValidationError)                   extends ValidationError
+    case IndexedFieldError(list: FieldName, index: Int, error: ValidationError) extends ValidationError
+
+  object ValidationError:
+    type FieldName = String
+
+    val missing: ValidationError = Cause("Missing")
+
+    private[cmn] def causeOf(error: Any): ValidationError =
+      error match
+        case ve: ValidationError => ve
+        case str: String         => Cause(str)
+        case _                   => Cause(error.toString)
+
+    def fieldError(field: FieldName, error: Any): ValidationError =
+      FieldError(field, causeOf(error))
+
+    def nestToField(field: FieldName): ValidationError => ValidationError = error => FieldError(field, error)
+
+    def missingField(field: FieldName): ValidationError = nestToField(field)(missing)
+
+    def indexFieldError(listName: FieldName, index: Int): ValidationError => ValidationError =
+      error => ValidationError.IndexedFieldError(listName, index, error)
+
+    def ensurePresentOption[A](fieldName: FieldName, optionA: Option[A]): Validation[ValidationError, A] =
+      Validation.fromEither(optionA.toRight(missingField(fieldName)))
+
+    def ensurePresent[A](fieldName: FieldName, a: A): Validation[ValidationError, A] =
+      ensurePresentOption(fieldName, Option(a))
+
+  end ValidationError
+
+  //
   // Smart Constructor
   //
   type SmartConstructor[A, E, B] = A => Validation[E, B]
-  object SmartConstructor:
 
-    extension [A, E, B](smartConstructor: SmartConstructor[A, E, B])
+  import zio.NonEmptyChunk
+  import ValidationError.{ causeOf, fieldError, indexFieldError, missingField }
 
-      def changeError[E1](f: E => E1): SmartConstructor[A, E1, B] =
-        smartConstructor.andThen(_.mapError(f))
+  extension [A, E, B](smartConstructor: SmartConstructor[A, E, B])
 
-      def required(ifMissing: => E): SmartConstructor[Option[A], E, B] =
-        optionA =>
-          optionA match
-            case Some(a) => smartConstructor(a)
-            case None    => Validation.fail(ifMissing)
+    def changeError[E1](f: E => E1): SmartConstructor[A, E1, B] =
+      smartConstructor.andThen(_.mapError(f))
 
-      def optional: SmartConstructor[Option[A], E, Option[B]] =
-        optionA =>
-          optionA match
-            case Some(a) => smartConstructor(a).map(Some.apply)
-            case None    => Validation.succeed(None)
+    def required(ifMissing: => E): SmartConstructor[Option[A], E, B] =
+      optionA =>
+        optionA match
+          case Some(a) => smartConstructor(a)
+          case None    => Validation.fail(ifMissing)
 
-  end SmartConstructor
+    def optional: SmartConstructor[Option[A], E, Option[B]] =
+      optionA =>
+        optionA match
+          case Some(a) => smartConstructor(a).map(Some.apply)
+          case None    => Validation.succeed(None)
+
+    def nest(fieldName: FieldName): SmartConstructor[A, ValidationError, B] =
+      smartConstructor.changeError(fieldError(fieldName, _))
+
+    def requiredFieldFromOption(field: FieldName, oa: Option[A]): Validation[ValidationError, B] =
+      smartConstructor
+        .changeError(fieldError(field, _))
+        .required(missingField(field))(oa)
+
+    def requiredField(field: FieldName, a: A): Validation[ValidationError, B] =
+      requiredFieldFromOption(field, Option(a))
+
+    def optionalFieldFromOption(field: FieldName, optionA: Option[A]): Validation[ValidationError, Option[B]] =
+      smartConstructor.changeError(fieldError(field, _)).optional(optionA)
+
+    def optionalField(field: FieldName, a: A): Validation[ValidationError, Option[B]] =
+      optionalFieldFromOption(field, Option(a))
+
+    def nonEmptyChunkField(fieldName: FieldName, as: Iterable[A]): Validation[ValidationError, NonEmptyChunk[B]] =
+      val notNullAs = Option(as).fold(Iterable.empty[A])(identity)
+      val maybeNEC =
+        NonEmptyChunk.fromIterableOption(notNullAs).toRight(missingField(fieldName))
+      Validation
+        .fromEither(maybeNEC)
+        .flatMap(nec =>
+          Validation.validateAll(nec.zipWithIndex.map { (a, index) =>
+            smartConstructor.changeError(causeOf.andThen(indexFieldError(fieldName, index)))(a)
+          })
+        )

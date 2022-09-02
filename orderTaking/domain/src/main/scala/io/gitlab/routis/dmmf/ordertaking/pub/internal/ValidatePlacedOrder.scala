@@ -1,12 +1,12 @@
 package io.gitlab.routis.dmmf.ordertaking.pub.internal
 
 import io.gitlab.routis.dmmf.ordertaking.cmn.*
+import ValidationError.{ ensurePresent, fieldError, indexFieldError, FieldName }
 import io.gitlab.routis.dmmf.ordertaking.pub.CheckAddressExists.{ AddressValidationError, CheckedAddress }
 import io.gitlab.routis.dmmf.ordertaking.pub.PlaceOrder.*
 import io.gitlab.routis.dmmf.ordertaking.pub.internal.PlaceOrderLive.{ ValidatedOrder, ValidatedOrderLine }
 import io.gitlab.routis.dmmf.ordertaking.pub.internal.ValidatePlacedOrder.*
 import io.gitlab.routis.dmmf.ordertaking.pub.internal.Validations.*
-import io.gitlab.routis.dmmf.ordertaking.pub.internal.Validations.ValidationError.*
 import io.gitlab.routis.dmmf.ordertaking.pub.{ CheckAddressExists, CheckProductCodeExists }
 import zio.prelude.*
 import zio.{ IO, NonEmptyChunk, UIO, URLayer, ZIO }

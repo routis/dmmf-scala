@@ -12,7 +12,7 @@ trait PlaceOrder:
 object PlaceOrder:
 
   // Types representing input of the place order (unvalidated order)
-  
+
   case class UnvalidatedCustomerInfo(firstName: String, lastName: String, emailAddress: String, vipStatus: String)
 
   case class UnvalidatedAddress(
@@ -34,7 +34,7 @@ object PlaceOrder:
     lines: List[UnvalidatedOrderLine],
     promotionCode: String
   )
-  
+
   // Types representing the outcome of placing an order
 
   import io.gitlab.routis.dmmf.ordertaking.cmn.*
@@ -58,7 +58,6 @@ object PlaceOrder:
 
   end PlaceOrderEvents
 
-  import io.gitlab.routis.dmmf.ordertaking.pub.internal.Validations.ValidationError
   enum PlaceOrderError:
     case ValidationFailure(errors: NonEmptyChunk[ValidationError]) extends PlaceOrderError
     case PricingError(cause: String)                               extends PlaceOrderError
