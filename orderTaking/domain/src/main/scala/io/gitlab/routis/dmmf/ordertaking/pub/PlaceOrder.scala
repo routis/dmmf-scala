@@ -58,7 +58,7 @@ object PlaceOrder:
 
   end PlaceOrderEvents
 
+  // Errors
   enum PlaceOrderError:
     case ValidationFailure(errors: NonEmptyChunk[ValidationError]) extends PlaceOrderError
     case PricingError(cause: String)                               extends PlaceOrderError
-  end PlaceOrderError

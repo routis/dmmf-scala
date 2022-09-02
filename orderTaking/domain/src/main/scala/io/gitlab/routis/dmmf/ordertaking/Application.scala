@@ -9,11 +9,14 @@ trait Application:
   def placeOrder(order: OrderDto): IO[PlaceOrderErrorDto, Unit]
 
 object Application:
+
+  private case class ApplicationLive() extends Application:
+    override def placeOrder(order: Dto.OrderDto): IO[Dto.PlaceOrderErrorDto, Unit] = ???
+
   object Dto:
 
     import io.gitlab.routis.dmmf.ordertaking.cmn.*
     import io.gitlab.routis.dmmf.ordertaking.pub.PlaceOrder.*
-    import io.gitlab.routis.dmmf.ordertaking.pub.internal.Validations.*
     import ValidationError.{ Cause, FieldError, IndexedFieldError }
     import PlaceOrderError.{ PricingError, ValidationFailure }
 
