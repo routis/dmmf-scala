@@ -10,10 +10,10 @@ trait Application:
 
 object Application:
 
-  import io.gitlab.routis.dmmf.ordertaking.pub.PlaceOrder
   import Application.Dto.PlaceOrderErrorDto
+  import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase
   import zio.ZIO
-  private case class ApplicationLive(private val placeOrder: PlaceOrder) extends Application:
+  private case class ApplicationLive(private val placeOrder: PlaceOrderUseCase) extends Application:
     override def placeOrder(order: Dto.OrderDto): IO[Dto.PlaceOrderErrorDto, Unit] =
       (for
         unvalidatedOrder <- ZIO.succeed(order.toUnvalidated)
@@ -22,8 +22,8 @@ object Application:
 
   object Dto:
 
-    import io.gitlab.routis.dmmf.ordertaking.cmn.*
-    import io.gitlab.routis.dmmf.ordertaking.pub.PlaceOrder.*
+    import io.gitlab.routis.dmmf.ordertaking.domain.*
+    import PlaceOrderUseCase.*
     import ValidationError.{ Cause, FieldError, IndexedFieldError }
     import PlaceOrderError.{ PricingError, ValidationFailure }
 

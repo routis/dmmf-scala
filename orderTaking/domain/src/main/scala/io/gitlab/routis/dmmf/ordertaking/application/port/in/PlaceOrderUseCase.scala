@@ -1,15 +1,15 @@
-package io.gitlab.routis.dmmf.ordertaking.pub
+package io.gitlab.routis.dmmf.ordertaking.application.port.in
 
 import zio.{ IO, NonEmptyChunk, ZIO }
 
 /**
  * A service for placing an order
  */
-trait PlaceOrder:
-  import PlaceOrder.{ PlaceOrderError, PlaceOrderEvents, UnvalidatedOrder }
+trait PlaceOrderUseCase:
+  import PlaceOrderUseCase.{ PlaceOrderError, PlaceOrderEvents, UnvalidatedOrder }
   def placeOrder(unvalidatedOrder: UnvalidatedOrder): IO[PlaceOrderError, PlaceOrderEvents]
 
-object PlaceOrder:
+object PlaceOrderUseCase:
 
   // Types representing input of the place order (unvalidated order)
 
@@ -37,7 +37,7 @@ object PlaceOrder:
 
   // Types representing the outcome of placing an order
 
-  import io.gitlab.routis.dmmf.ordertaking.cmn.*
+  import io.gitlab.routis.dmmf.ordertaking.domain.*
 
   case class ShippableOrderLine(productCode: ProductCode, quantity: OrderQuantity)
 

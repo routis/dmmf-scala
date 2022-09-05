@@ -1,4 +1,4 @@
-package io.gitlab.routis.dmmf.ordertaking.cmn
+package io.gitlab.routis.dmmf.ordertaking.domain
 
 import zio.prelude.{ Assertion, Newtype, Subtype, Validation }
 import zio.prelude.Assertion.{ greaterThanOrEqualTo, lessThanOrEqualTo }

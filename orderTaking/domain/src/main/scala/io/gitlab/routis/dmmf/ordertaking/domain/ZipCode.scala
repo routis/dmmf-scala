@@ -1,4 +1,4 @@
-package io.gitlab.routis.dmmf.ordertaking.cmn
+package io.gitlab.routis.dmmf.ordertaking.domain
 
 import zio.prelude.{ Assertion, Subtype }
 import zio.prelude.Assertion.matches

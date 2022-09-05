@@ -1,9 +1,9 @@
 package io.gitlab.routis.dmmf.ordertaking
 
-import io.gitlab.routis.dmmf.ordertaking.cmn.ValidationError.missingField
+import io.gitlab.routis.dmmf.ordertaking.domain.ValidationError.missingField
 import zio.prelude.Validation
 
-package object cmn:
+package object domain:
   //
   // New types (Value objects in DDD terms)
   //
@@ -77,7 +77,7 @@ package object cmn:
 
     val missing: ValidationError = Cause("Missing")
 
-    private[cmn] def causeOf(error: Any): ValidationError =
+    private[domain] def causeOf(error: Any): ValidationError =
       error match
         case ve: ValidationError => ve
         case str: String         => Cause(str)

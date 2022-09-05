@@ -1,4 +1,4 @@
-package io.gitlab.routis.dmmf.ordertaking.cmn
+package io.gitlab.routis.dmmf.ordertaking.domain
 
 enum VipStatus extends Enum[VipStatus]:
   case Normal, Vip

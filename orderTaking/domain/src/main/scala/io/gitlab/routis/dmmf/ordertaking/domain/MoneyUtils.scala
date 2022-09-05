@@ -1,4 +1,4 @@
-package io.gitlab.routis.dmmf.ordertaking.cmn
+package io.gitlab.routis.dmmf.ordertaking.domain
 
 import zio.prelude.Validation
 import org.joda.money.{ CurrencyUnit as JodaCurrencyUnit, Money as JodaMoney }

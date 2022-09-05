@@ -1,4 +1,4 @@
-package io.gitlab.routis.dmmf.ordertaking.cmn
+package io.gitlab.routis.dmmf.ordertaking.domain
 
 case class Address(
   addressLine1: String50,

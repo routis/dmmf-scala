@@ -1,24 +1,27 @@
-package io.gitlab.routis.dmmf.ordertaking.pub.internal
+package io.gitlab.routis.dmmf.ordertaking.application.service
 
-import io.gitlab.routis.dmmf.ordertaking.cmn.*
-import ValidationError.{ ensurePresent, fieldError, indexFieldError, FieldName }
-import io.gitlab.routis.dmmf.ordertaking.pub.CheckAddressExists.{ AddressValidationError, CheckedAddress }
-import io.gitlab.routis.dmmf.ordertaking.pub.PlaceOrder.*
-import io.gitlab.routis.dmmf.ordertaking.pub.internal.PlaceOrderLive.{ ValidatedOrder, ValidatedOrderLine }
-import io.gitlab.routis.dmmf.ordertaking.pub.internal.ValidatePlacedOrder.*
-import io.gitlab.routis.dmmf.ordertaking.pub.internal.Validations.*
-import io.gitlab.routis.dmmf.ordertaking.pub.{ CheckAddressExists, CheckProductCodeExists }
+import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase.*
+import io.gitlab.routis.dmmf.ordertaking.application.port.out.CheckAddressExists.{
+  AddressValidationError,
+  CheckedAddress
+}
+import io.gitlab.routis.dmmf.ordertaking.application.port.out.{ CheckAddressExists, CheckProductCodeExists }
+import io.gitlab.routis.dmmf.ordertaking.application.service.PlaceOrderService.{ ValidatedOrder, ValidatedOrderLine }
+import io.gitlab.routis.dmmf.ordertaking.application.service.PlaceOrderValidationServiceLive.*
+import io.gitlab.routis.dmmf.ordertaking.application.service.Validations.*
+import io.gitlab.routis.dmmf.ordertaking.domain.*
+import io.gitlab.routis.dmmf.ordertaking.domain.ValidationError.{ ensurePresent, fieldError, indexFieldError, FieldName }
 import zio.prelude.*
 import zio.{ IO, NonEmptyChunk, UIO, URLayer, ZIO }
 
 import scala.util.Either
 
-private[internal] case class ValidatePlacedOrder(
+private[service] case class PlaceOrderValidationServiceLive(
   checkAddressExists: CheckAddressExists,
   checkProductCodeExists: CheckProductCodeExists
-) extends PlaceOrderLive.Validate:
+) extends PlaceOrderService.PlaceOrderValidationService:
 
-  import ValidatePlacedOrder.DomainValidation
+  import PlaceOrderValidationServiceLive.DomainValidation
 
   private def toCheckedAddress(field: FieldName, address: UnvalidatedAddress): UIO[DomainValidation[Address]] =
 
@@ -110,7 +113,7 @@ private[internal] case class ValidatePlacedOrder(
       }
     }
 
-private object ValidatePlacedOrder:
+private object PlaceOrderValidationServiceLive:
   type DomainValidation[A] = Validation[ValidationError, A]
 
   def toValidatedOrder(

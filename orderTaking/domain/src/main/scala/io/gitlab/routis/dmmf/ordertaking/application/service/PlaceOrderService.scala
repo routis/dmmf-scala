@@ -1,32 +1,33 @@
-package io.gitlab.routis.dmmf.ordertaking.pub.internal
+package io.gitlab.routis.dmmf.ordertaking.application.service
 
-import io.gitlab.routis.dmmf.ordertaking.cmn.*
-import io.gitlab.routis.dmmf.ordertaking.pub.PlaceOrder.*
-import io.gitlab.routis.dmmf.ordertaking.pub.PlaceOrder.PlaceOrderError.PricingError
-import io.gitlab.routis.dmmf.ordertaking.pub.internal.PlaceOrderLive.*
-import io.gitlab.routis.dmmf.ordertaking.pub.{ CheckAddressExists, CheckProductCodeExists, PlaceOrder }
+import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase
+import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase.*
+import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase.PlaceOrderError.PricingError
+import io.gitlab.routis.dmmf.ordertaking.application.port.out.{ CheckAddressExists, CheckProductCodeExists }
+import io.gitlab.routis.dmmf.ordertaking.application.service.PlaceOrderService.*
+import io.gitlab.routis.dmmf.ordertaking.domain.*
 import zio.{ IO, NonEmptyChunk, UIO, URLayer, ZIO }
 
 /**
  * The implementation of [PlaceOrder] Delegates validation to [Validate] which is implemented by [ValidatePlacedOrder]
  */
-private case class PlaceOrderLive(validator: Validate) extends PlaceOrder:
+private case class PlaceOrderService(validationService: PlaceOrderValidationService) extends PlaceOrderUseCase:
 
   override def placeOrder(unvalidatedOrder: UnvalidatedOrder): IO[PlaceOrderError, PlaceOrderEvents] =
     ???
 
-object PlaceOrderLive:
+object PlaceOrderService:
 
   //
   // Validation types and services
   //
-  private[internal] final case class ValidatedOrderLine(
+  private[service] final case class ValidatedOrderLine(
     orderLineId: OrderLineId,
     productCode: ProductCode,
     quantity: OrderQuantity
   )
 
-  private[internal] final case class ValidatedOrder(
+  private[service] final case class ValidatedOrder(
     orderId: OrderId,
     customerInfo: CustomerInfo,
     shippingAddress: Address,
@@ -34,22 +35,21 @@ object PlaceOrderLive:
     lines: NonEmptyChunk[ValidatedOrderLine]
   )
 
-  private[internal] trait Validate:
+  private[service] trait PlaceOrderValidationService:
     def validateOrder(unvalidatedOrder: UnvalidatedOrder): IO[PlaceOrderError.ValidationFailure, ValidatedOrder]
 
   //
   // Pricing types and services
   //
 
-  sealed trait PricedOrderLine
-  object PricedOrderLine:
-    final case class PricedOrderProductLine(
+  enum PricedOrderLine:
+    case PricedOrderProductLine(
       orderLineId: OrderLineId,
       productCode: ProductCode,
       quantity: OrderQuantity,
       linePrice: Price
-    ) extends PricedOrderLine
-    final case class Comment(comment: String) extends PricedOrderLine
+    )                             extends PricedOrderLine
+    case Comment(comment: String) extends PricedOrderLine
   end PricedOrderLine
 
   enum PricingMethod:
@@ -70,10 +70,11 @@ object PlaceOrderLive:
   //
   // Dependency Injection
   //
-  val layer: URLayer[CheckAddressExists & CheckProductCodeExists, PlaceOrderLive] =
+  val layer: URLayer[CheckAddressExists & CheckProductCodeExists, PlaceOrderUseCase] =
     zio.ZLayer {
       for
         checkAddressExists     <- ZIO.service[CheckAddressExists]
         checkProductCodeExists <- ZIO.service[CheckProductCodeExists]
-      yield PlaceOrderLive(ValidatePlacedOrder(checkAddressExists, checkProductCodeExists))
+        validationService       = PlaceOrderValidationServiceLive(checkAddressExists, checkProductCodeExists)
+      yield PlaceOrderService(validationService)
     }

@@ -1,9 +1,8 @@
-package io.gitlab.routis.dmmf.ordertaking.pub.internal
+package io.gitlab.routis.dmmf.ordertaking.application.service
 
-import io.gitlab.routis.dmmf.ordertaking.cmn.ValidationError.{ indexFieldError, missingField }
+import zio.prelude.Validation
 import zio.{ IO, NonEmptyChunk, UIO }
-import zio.prelude.{ Validation, ZValidation }
-import io.gitlab.routis.dmmf.ordertaking.cmn.SmartConstructor
+
 object Validations:
 
   extension [E, A](x: IO[NonEmptyChunk[E], A])

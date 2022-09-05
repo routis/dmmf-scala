@@ -1,16 +1,15 @@
-package io.gitlab.routis.dmmf.ordertaking.pub.internal
+package io.gitlab.routis.dmmf.ordertaking.application.service
 
-import io.gitlab.routis.dmmf.ordertaking.cmn.ProductCode.value
-import io.gitlab.routis.dmmf.ordertaking.pub.CheckProductCodeExists
-import io.gitlab.routis.dmmf.ordertaking.pub.PlaceOrder.{
+import io.gitlab.routis.dmmf.ordertaking.Application.Dto.PlaceOrderErrorDto
+import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase.{
   UnvalidatedAddress,
   UnvalidatedCustomerInfo,
   UnvalidatedOrder,
   UnvalidatedOrderLine
 }
-import io.gitlab.routis.dmmf.ordertaking.pub.CheckAddressExists.CheckedAddress
-import io.gitlab.routis.dmmf.ordertaking.pub.CheckAddressExists
-import io.gitlab.routis.dmmf.ordertaking.Application.Dto.{ PlaceOrderErrorDto, ValidationErrorDto }
+import io.gitlab.routis.dmmf.ordertaking.application.port.out.CheckAddressExists.CheckedAddress
+import io.gitlab.routis.dmmf.ordertaking.application.port.out.{ CheckAddressExists, CheckProductCodeExists }
+import io.gitlab.routis.dmmf.ordertaking.domain.ProductCode.value
 import zio.ZIO
 
 object App extends zio.ZIOAppDefault:
@@ -32,12 +31,12 @@ object App extends zio.ZIOAppDefault:
     )
   import zio.given
 
-  lazy val placeOrderSrv: ValidatePlacedOrder =
+  lazy val placeOrderSrv: PlaceOrderValidationServiceLive =
     val checkAddressExists: CheckAddressExists    = u => ZIO.succeed(CheckedAddress(u)).delay(100.millisecond)
     val productCodeExists: CheckProductCodeExists = pc => ZIO.succeed(value(pc) == "G123").delay(120.millisecond)
-    ValidatePlacedOrder(checkAddressExists, productCodeExists)
+    PlaceOrderValidationServiceLive(checkAddressExists, productCodeExists)
 
-  def placeOrder(unvalidatedOrder: UnvalidatedOrder): ZIO[Any, PlaceOrderErrorDto, PlaceOrderLive.ValidatedOrder] =
+  def placeOrder(unvalidatedOrder: UnvalidatedOrder): ZIO[Any, PlaceOrderErrorDto, PlaceOrderService.ValidatedOrder] =
     placeOrderSrv
       .validateOrder(unvalidatedOrder)
       .mapError(PlaceOrderErrorDto.fromDomain)
