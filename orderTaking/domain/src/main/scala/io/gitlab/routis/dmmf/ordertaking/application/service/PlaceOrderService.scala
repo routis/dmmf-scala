@@ -32,7 +32,8 @@ object PlaceOrderService:
     customerInfo: CustomerInfo,
     shippingAddress: Address,
     billingAddress: Address,
-    lines: NonEmptyChunk[ValidatedOrderLine]
+    lines: NonEmptyChunk[ValidatedOrderLine],
+    pricingMethod: PricingMethod
   )
 
   private[service] trait PlaceOrderValidationService:
@@ -55,6 +56,16 @@ object PlaceOrderService:
   enum PricingMethod:
     case Standard()
     case Promotion(code: PromotionCode)
+  object PricingMethod:
+    def create(promotionCode: String): PricingMethod = makePromotionCode
+      .optional(Option(promotionCode))
+      .fold(
+        _ => Standard(),
+        x =>
+          x match
+            case Some(pc) => Promotion(pc)
+            case _        => Standard()
+      )
   case class PricedOrder(
     orderId: OrderId,
     customerInfo: CustomerInfo,

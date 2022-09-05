@@ -26,11 +26,11 @@ package object domain:
   def makeOrderQuantity(productCode: ProductCode): SmartConstructor[Double, String, OrderQuantity] =
     OrderQuantity.forProduct(productCode)
 
-  val makeZipCode: SmartConstructor[String, String, ZipCode]           = ZipCode.make
-  val makeEmailAddress: SmartConstructor[String, String, EmailAddress] = EmailAddress.make
-  val makeString50: SmartConstructor[String, String, String50]         = String50.make
-  val makeVipStatus: SmartConstructor[String, String, VipStatus]       = VipStatus.make
-
+  val makeZipCode: SmartConstructor[String, String, ZipCode]             = ZipCode.make
+  val makeEmailAddress: SmartConstructor[String, String, EmailAddress]   = EmailAddress.make
+  val makeString50: SmartConstructor[String, String, String50]           = String50.make
+  val makeVipStatus: SmartConstructor[String, String, VipStatus]         = VipStatus.make
+  val makePromotionCode: SmartConstructor[String, String, PromotionCode] = PromotionCode.make
   //
   // Constructors for compound types (Value objects in DDD terms)
   //

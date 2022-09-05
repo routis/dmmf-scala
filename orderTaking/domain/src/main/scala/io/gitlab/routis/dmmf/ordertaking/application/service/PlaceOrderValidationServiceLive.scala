@@ -6,7 +6,11 @@ import io.gitlab.routis.dmmf.ordertaking.application.port.out.CheckAddressExists
   CheckedAddress
 }
 import io.gitlab.routis.dmmf.ordertaking.application.port.out.{ CheckAddressExists, CheckProductCodeExists }
-import io.gitlab.routis.dmmf.ordertaking.application.service.PlaceOrderService.{ ValidatedOrder, ValidatedOrderLine }
+import io.gitlab.routis.dmmf.ordertaking.application.service.PlaceOrderService.{
+  PricingMethod,
+  ValidatedOrder,
+  ValidatedOrderLine
+}
 import io.gitlab.routis.dmmf.ordertaking.application.service.PlaceOrderValidationServiceLive.*
 import io.gitlab.routis.dmmf.ordertaking.application.service.Validations.*
 import io.gitlab.routis.dmmf.ordertaking.domain.*
@@ -112,8 +116,16 @@ private[service] case class PlaceOrderValidationServiceLive(
           shippingAddress <- shippingAddressFiber.join
           billingAddress  <- billingAddressFiber.join
           lines           <- linesFiber.join
+          pricingMethod    = PricingMethod.create(unvalidated.promotionCode)
           _               <- ZIO.log("Valid")
-        yield toValidatedOrder(orderId, customerInfo, shippingAddress, billingAddress, lines)).ioValidation
+        yield toValidatedOrder(
+          orderId,
+          customerInfo,
+          shippingAddress,
+          billingAddress,
+          lines,
+          pricingMethod
+        )).ioValidation
           .mapError(PlaceOrderError.ValidationFailure.apply)
       }
     }
@@ -126,10 +138,13 @@ private object PlaceOrderValidationServiceLive:
     customerInfo: Validation[ValidationError, CustomerInfo],
     shippingAddress: Validation[ValidationError, Address],
     billingAddress: Validation[ValidationError, Address],
-    lines: Validation[ValidationError, NonEmptyChunk[ValidatedOrderLine]]
+    lines: Validation[ValidationError, NonEmptyChunk[ValidatedOrderLine]],
+    pricingMethod: PricingMethod
   ): DomainValidation[ValidatedOrder] =
     Validation
-      .validateWith(orderId, customerInfo, shippingAddress, billingAddress, lines)(ValidatedOrder.apply)
+      .validateWith(orderId, customerInfo, shippingAddress, billingAddress, lines, Validation.succeed(pricingMethod))(
+        ValidatedOrder.apply
+      )
 
   def toValidatedOrderLine(
     unvalidated: UnvalidatedOrderLine,
