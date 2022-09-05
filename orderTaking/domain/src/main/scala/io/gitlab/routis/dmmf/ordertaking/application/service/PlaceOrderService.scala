@@ -13,7 +13,7 @@ import zio.{ IO, NonEmptyChunk, UIO, URLayer, ZIO }
  */
 private case class PlaceOrderService(validationService: PlaceOrderValidationService) extends PlaceOrderUseCase:
 
-  override def placeOrder(unvalidatedOrder: UnvalidatedOrder): IO[PlaceOrderError, PlaceOrderEvents] =
+  override def placeOrder(unvalidatedOrder: UnvalidatedOrder): IO[PlaceOrderError, List[PlaceOrderEvent]] =
     ???
 
 object PlaceOrderService:

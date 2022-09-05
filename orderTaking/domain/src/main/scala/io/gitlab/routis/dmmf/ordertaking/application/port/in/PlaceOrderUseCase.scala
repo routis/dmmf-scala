@@ -6,8 +6,8 @@ import zio.{ IO, NonEmptyChunk, ZIO }
  * A service for placing an order
  */
 trait PlaceOrderUseCase:
-  import PlaceOrderUseCase.{ PlaceOrderError, PlaceOrderEvents, UnvalidatedOrder }
-  def placeOrder(unvalidatedOrder: UnvalidatedOrder): IO[PlaceOrderError, PlaceOrderEvents]
+  import PlaceOrderUseCase.{ PlaceOrderError, PlaceOrderEvent, UnvalidatedOrder }
+  def placeOrder(unvalidatedOrder: UnvalidatedOrder): IO[PlaceOrderError, List[PlaceOrderEvent]]
 
 object PlaceOrderUseCase:
 
@@ -41,7 +41,7 @@ object PlaceOrderUseCase:
 
   case class ShippableOrderLine(productCode: ProductCode, quantity: OrderQuantity)
 
-  enum PlaceOrderEvents:
+  enum PlaceOrderEvent:
 
     case ShippableOrderSent(
       orderId: OrderId,
@@ -49,14 +49,14 @@ object PlaceOrderUseCase:
       billingAddress: Address,
       lines: NonEmptyChunk[ShippableOrderLine],
       promotionCode: PromotionCode
-    ) extends PlaceOrderEvents
+    ) extends PlaceOrderEvent
 
     case BillableOrderPlaced(orderId: OrderId, billingAddress: Address, billingAmount: BillingAmount)
-        extends PlaceOrderEvents
+        extends PlaceOrderEvent
 
-    case AcknowledgementSent(orderId: OrderId, emailAddress: EmailAddress) extends PlaceOrderEvents
+    case AcknowledgementSent(orderId: OrderId, emailAddress: EmailAddress) extends PlaceOrderEvent
 
-  end PlaceOrderEvents
+  end PlaceOrderEvent
 
   // Errors
   enum PlaceOrderError:

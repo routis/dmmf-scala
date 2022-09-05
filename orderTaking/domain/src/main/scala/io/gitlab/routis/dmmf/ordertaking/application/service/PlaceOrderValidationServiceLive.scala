@@ -10,7 +10,12 @@ import io.gitlab.routis.dmmf.ordertaking.application.service.PlaceOrderService.{
 import io.gitlab.routis.dmmf.ordertaking.application.service.PlaceOrderValidationServiceLive.*
 import io.gitlab.routis.dmmf.ordertaking.application.service.Validations.*
 import io.gitlab.routis.dmmf.ordertaking.domain.*
-import io.gitlab.routis.dmmf.ordertaking.domain.ValidationError.{ ensurePresent, fieldError, indexFieldError, FieldName }
+import io.gitlab.routis.dmmf.ordertaking.domain.ValidationError.{
+  ensurePresent,
+  fieldError,
+  indexFieldError,
+  FieldName
+}
 import zio.prelude.*
 import zio.{ IO, NonEmptyChunk, UIO, URLayer, ZIO }
 
