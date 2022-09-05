@@ -10,8 +10,15 @@ trait Application:
 
 object Application:
 
-  private case class ApplicationLive() extends Application:
-    override def placeOrder(order: Dto.OrderDto): IO[Dto.PlaceOrderErrorDto, Unit] = ???
+  import io.gitlab.routis.dmmf.ordertaking.pub.PlaceOrder
+  import Application.Dto.PlaceOrderErrorDto
+  import zio.ZIO
+  private case class ApplicationLive(private val placeOrder: PlaceOrder) extends Application:
+    override def placeOrder(order: Dto.OrderDto): IO[Dto.PlaceOrderErrorDto, Unit] =
+      (for
+        unvalidatedOrder <- ZIO.succeed(order.toUnvalidated)
+        events           <- placeOrder.placeOrder(unvalidatedOrder).mapError(PlaceOrderErrorDto.fromDomain)
+      yield events).unit
 
   object Dto:
 
@@ -100,14 +107,35 @@ object Application:
     end AddressDto
 
     case class OrderLineDto(orderLineId: String, productCode: String, quantity: Double)
+    object OrderLineDto:
+      extension (dto: OrderLineDto)
+        def toUnvalidated: UnvalidatedOrderLine =
+          UnvalidatedOrderLine(dto.orderLineId, dto.productCode, dto.quantity)
+
     case class OrderDto(
       orderId: String,
       customerInfo: CustomerInfoDto,
       shippingAddress: AddressDto,
       billingAddress: AddressDto,
-      lines: List[OrderLineDto],
+      lines: Array[OrderLineDto],
       promotionCode: String
     )
+    object OrderDto:
+      extension (dto: OrderDto)
+        def toUnvalidated: UnvalidatedOrder =
+
+          import AddressDto.toUnvalidated
+          import OrderLineDto.toUnvalidated
+          import CustomerInfoDto.toUnvalidated
+
+          UnvalidatedOrder(
+            dto.orderId,
+            dto.customerInfo.toUnvalidated,
+            dto.shippingAddress.toUnvalidated,
+            dto.billingAddress.toUnvalidated,
+            if dto.lines == null then List.empty else dto.lines.map(_.toUnvalidated).toList,
+            dto.promotionCode
+          )
 
     case class ValidationErrorDto(fieldName: String, description: String)
     object ValidationErrorDto:
