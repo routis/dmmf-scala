@@ -3,7 +3,12 @@ package io.gitlab.routis.dmmf.ordertaking.domain
 import zio.prelude.{ Assertion, Newtype, Subtype, Validation }
 import zio.prelude.Assertion.{ greaterThanOrEqualTo, lessThanOrEqualTo }
 
-sealed trait OrderQuantity
+sealed trait OrderQuantity:
+  import io.gitlab.routis.dmmf.ordertaking.domain.OrderQuantity.{ Kilograms, KilogramsQuantity, Units, UnitsQuantity }
+  def value: Double =
+    this match
+      case Kilograms(kilograms) => KilogramsQuantity.unwrap(kilograms)
+      case Units(units)         => UnitsQuantity.unwrap(units).toDouble
 object OrderQuantity:
 
   type KilogramsQuantity = OrderQuantity.KilogramsQuantity.Type
@@ -26,8 +31,3 @@ object OrderQuantity:
         KilogramsQuantity.make(value).map(Kilograms.apply)
       case _: ProductCode.WidgetCode =>
         UnitsQuantity.make(value.intValue()).map(Units.apply)
-
-  def value(orderQuantity: OrderQuantity): Double =
-    orderQuantity match
-      case Kilograms(kilograms) => KilogramsQuantity.unwrap(kilograms)
-      case Units(units)         => UnitsQuantity.unwrap(units).toDouble

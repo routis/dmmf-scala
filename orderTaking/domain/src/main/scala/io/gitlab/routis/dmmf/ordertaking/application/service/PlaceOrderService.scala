@@ -3,7 +3,12 @@ package io.gitlab.routis.dmmf.ordertaking.application.service
 import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase
 import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase.*
 import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase.PlaceOrderError.PricingError
-import io.gitlab.routis.dmmf.ordertaking.application.port.out.{ CheckAddressExists, CheckProductCodeExists }
+import io.gitlab.routis.dmmf.ordertaking.application.port.out.{
+  CheckAddressExists,
+  CheckProductCodeExists,
+  GetPromotionProductPrice,
+  GetStandardProductPrice
+}
 import io.gitlab.routis.dmmf.ordertaking.application.service.PlaceOrderService.*
 import io.gitlab.routis.dmmf.ordertaking.domain.*
 import zio.{ IO, NonEmptyChunk, UIO, URLayer, ZIO }
@@ -11,10 +16,14 @@ import zio.{ IO, NonEmptyChunk, UIO, URLayer, ZIO }
 /**
  * The implementation of [PlaceOrder] Delegates validation to [Validate] which is implemented by [ValidatePlacedOrder]
  */
-private case class PlaceOrderService(validationService: PlaceOrderValidationService) extends PlaceOrderUseCase:
+private[service] case class PlaceOrderService(validationService: ValidateOrder, priceService: PriceOrder)
+    extends PlaceOrderUseCase:
 
   override def placeOrder(unvalidatedOrder: UnvalidatedOrder): IO[PlaceOrderError, List[PlaceOrderEvent]] =
-    ???
+    for
+      validatedOrder <- validationService.validateOrder(unvalidatedOrder)
+      pricedOrder    <- priceService.priceOrder(validatedOrder)
+    yield List.empty
 
 object PlaceOrderService:
 
@@ -36,7 +45,7 @@ object PlaceOrderService:
     pricingMethod: PricingMethod
   )
 
-  private[service] trait PlaceOrderValidationService:
+  private[service] trait ValidateOrder:
     def validateOrder(unvalidatedOrder: UnvalidatedOrder): IO[PlaceOrderError.ValidationFailure, ValidatedOrder]
 
   //
@@ -44,6 +53,12 @@ object PlaceOrderService:
   //
 
   enum PricedOrderLine:
+
+    def price: Price =
+      this match
+        case PricedOrderProductLine(_, _, _, linePrice) => linePrice
+        case Comment(_)                                 => Price.zero
+
     case PricedOrderProductLine(
       orderLineId: OrderLineId,
       productCode: ProductCode,
@@ -54,8 +69,8 @@ object PlaceOrderService:
   end PricedOrderLine
 
   enum PricingMethod:
-    case Standard()
-    case Promotion(code: PromotionCode)
+    case Standard()                     extends PricingMethod
+    case Promotion(code: PromotionCode) extends PricingMethod
   object PricingMethod:
     def create(promotionCode: String): PricingMethod =
       Option(promotionCode)
@@ -72,17 +87,23 @@ object PlaceOrderService:
     lines: NonEmptyChunk[PricedOrderLine],
     pricingMethod: PricingMethod
   )
-  trait GetPrice:
+  private[service] trait PriceOrder:
     def priceOrder(validatedOrder: ValidatedOrder): IO[PricingError, PricedOrder]
 
   //
   // Dependency Injection
   //
-  val layer: URLayer[CheckAddressExists & CheckProductCodeExists, PlaceOrderUseCase] =
+  val layer: URLayer[
+    CheckAddressExists & CheckProductCodeExists & GetStandardProductPrice & GetPromotionProductPrice,
+    PlaceOrderUseCase
+  ] =
     zio.ZLayer {
       for
         checkAddressExists     <- ZIO.service[CheckAddressExists]
         checkProductCodeExists <- ZIO.service[CheckProductCodeExists]
-        validationService       = PlaceOrderValidationServiceLive(checkAddressExists, checkProductCodeExists)
-      yield PlaceOrderService(validationService)
+        standardPrices         <- ZIO.service[GetStandardProductPrice]
+        promoPrices            <- ZIO.service[GetPromotionProductPrice]
+        validationService       = PlaceOrderValidationService(checkAddressExists, checkProductCodeExists)
+        priceService            = PricingService(standardPrices, promoPrices)
+      yield PlaceOrderService(validationService, priceService)
     }

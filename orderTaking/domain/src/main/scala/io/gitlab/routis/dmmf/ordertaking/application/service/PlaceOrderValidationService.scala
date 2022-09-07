@@ -11,7 +11,7 @@ import io.gitlab.routis.dmmf.ordertaking.application.service.PlaceOrderService.{
   ValidatedOrder,
   ValidatedOrderLine
 }
-import io.gitlab.routis.dmmf.ordertaking.application.service.PlaceOrderValidationServiceLive.*
+import io.gitlab.routis.dmmf.ordertaking.application.service.PlaceOrderValidationService.*
 import io.gitlab.routis.dmmf.ordertaking.application.service.Validations.*
 import io.gitlab.routis.dmmf.ordertaking.domain.*
 import io.gitlab.routis.dmmf.ordertaking.domain.ValidationError.{
@@ -25,12 +25,12 @@ import zio.{ IO, NonEmptyChunk, UIO, URLayer, ZIO }
 
 import scala.util.Either
 
-private[service] case class PlaceOrderValidationServiceLive(
+private[service] case class PlaceOrderValidationService(
   checkAddressExists: CheckAddressExists,
   checkProductCodeExists: CheckProductCodeExists
-) extends PlaceOrderService.PlaceOrderValidationService:
+) extends PlaceOrderService.ValidateOrder:
 
-  import PlaceOrderValidationServiceLive.DomainValidation
+  import PlaceOrderValidationService.DomainValidation
 
   private def toCheckedAddress(field: FieldName, address: UnvalidatedAddress): UIO[DomainValidation[Address]] =
 
@@ -130,7 +130,7 @@ private[service] case class PlaceOrderValidationServiceLive(
       }
     }
 
-private object PlaceOrderValidationServiceLive:
+private[service] object PlaceOrderValidationService:
   type DomainValidation[A] = Validation[ValidationError, A]
 
   def toValidatedOrder(

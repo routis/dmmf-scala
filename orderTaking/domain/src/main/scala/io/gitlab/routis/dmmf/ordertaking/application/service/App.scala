@@ -14,17 +14,17 @@ import io.gitlab.routis.dmmf.ordertaking.application.port.out.{
   GetPromotionProductPrice,
   GetStandardProductPrice
 }
-import io.gitlab.routis.dmmf.ordertaking.domain.ProductCode.value
-import io.gitlab.routis.dmmf.ordertaking.domain.{ ProductCode, PromotionCode }
+
+import io.gitlab.routis.dmmf.ordertaking.domain.{ MoneyUtils, Price, ProductCode, PromotionCode }
 import zio.{ UIO, ZIO }
 
 object App extends zio.ZIOAppDefault:
 
-  private val standardPrices: GetStandardProductPrice = _ => ZIO.succeed(10)
+  private val standardPrices: GetStandardProductPrice = _ => ZIO.succeed(Price.makeUnsafe(10))
 
   private val promoPrices: GetPromotionProductPrice = (promoCode, _) =>
     promoCode match
-      case PromotionCode("123") => ZIO.succeed(Some(5))
+      case PromotionCode("123") => ZIO.succeed(Some(Price.makeUnsafe(5)))
       case _                    => ZIO.succeed(None)
 
   private val ethnikisAntistaseos =
@@ -45,16 +45,27 @@ object App extends zio.ZIOAppDefault:
     )
   import zio.given
 
-  lazy val placeOrderSrv: PlaceOrderValidationServiceLive =
-    val checkAddressExists: CheckAddressExists    = u => ZIO.succeed(CheckedAddress(u)).delay(100.millisecond)
-    val productCodeExists: CheckProductCodeExists = pc => ZIO.succeed(value(pc) == "G123").delay(120.millisecond)
-    PlaceOrderValidationServiceLive(checkAddressExists, productCodeExists)
+  lazy val placeOrderValidationSrv: PlaceOrderValidationService =
+    val checkAddressExists: CheckAddressExists = u => ZIO.succeed(CheckedAddress(u)).delay(100.millisecond)
+    val productCodeExists: CheckProductCodeExists = pc =>
+      ZIO.succeed(ProductCode.value(pc) == "G123").delay(120.millisecond)
+    PlaceOrderValidationService(checkAddressExists, productCodeExists)
+
+  lazy val priceOrderSrv: PlaceOrderService.PriceOrder =
+    PricingService(standardPrices, promoPrices)
 
   def placeOrder(unvalidatedOrder: UnvalidatedOrder): ZIO[Any, PlaceOrderErrorDto, PlaceOrderService.ValidatedOrder] =
-    placeOrderSrv
+    placeOrderValidationSrv
       .validateOrder(unvalidatedOrder)
+      .mapError(PlaceOrderErrorDto.fromDomain)
+
+  def priceOrder(
+    validatedOrder: PlaceOrderService.ValidatedOrder
+  ): ZIO[Any, PlaceOrderErrorDto, PlaceOrderService.PricedOrder] =
+    priceOrderSrv
+      .priceOrder(validatedOrder)
       .mapError(PlaceOrderErrorDto.fromDomain)
 
   // noinspection TypeAnnotation
   override def run =
-    placeOrder(order).either.debug("here")
+    placeOrder(order).flatMap(priceOrder).either.debug("here")

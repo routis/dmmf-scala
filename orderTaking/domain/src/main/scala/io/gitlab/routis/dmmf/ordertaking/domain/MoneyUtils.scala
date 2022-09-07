@@ -9,19 +9,18 @@ import scala.util.Try
 object MoneyUtils:
 
   val EUR: JodaCurrencyUnit = JodaCurrencyUnit.EUR
+  val zero: JodaMoney       = JodaMoney.zero(EUR)
 
-  def of(currency: JodaCurrencyUnit, amount: BigDecimal): Validation[String, BigDecimal] =
+  def makeUnsafe(amount: BigDecimal): JodaMoney = JodaMoney.of(EUR, amount.bigDecimal)
+  def make(amount: BigDecimal): Validation[String, JodaMoney] =
     Validation
-      .fromTry(Try(JodaMoney.of(currency, amount.bigDecimal)))
+      .fromTry(Try(makeUnsafe(amount)))
       .mapError(t => s"Not a valid amount. ${t.getMessage}")
-      .map(_.getAmount)
 
-  def of(currency: Currency, amount: BigDecimal): Validation[String, BigDecimal] =
-    of(JodaCurrencyUnit.of(currency), amount)
+  inline given JodaMoneyHasOrdering: Ordering[JodaMoney] with
+    override def compare(x: JodaMoney, y: JodaMoney): Int = x.compareTo(y)
 
-  def eurosOf(amount: BigDecimal): Validation[String, BigDecimal] =
-    of(EUR, amount)
+  inline given JodaMoneyAdditionIsIdentity: zio.prelude.Identity[JodaMoney] with
+    override def combine(l: => JodaMoney, r: => JodaMoney): JodaMoney = l.plus(r)
 
-  @main def test(): Unit =
-    println(MoneyUtils.eurosOf(100.004))
-    println(ProductCode.make("G123"))
+    override def identity: JodaMoney = zero

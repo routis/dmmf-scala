@@ -1,6 +1,7 @@
 package io.gitlab.routis.dmmf.ordertaking
 
 import io.gitlab.routis.dmmf.ordertaking.domain.ValidationError.missingField
+import org.joda.money.Money as JodaMoney
 import zio.prelude.Validation
 
 package object domain:
@@ -9,8 +10,8 @@ package object domain:
   //
   type OrderId       = OrderId.Type
   type OrderLineId   = OrderLineId.Type
-  type Price         = BigDecimal
-  type BillingAmount = zio.prelude.newtypes.Sum[BigDecimal]
+  type Price         = Price.Type
+  type BillingAmount = JodaMoney // zio.prelude.newtypes.Sum[JodaMoney]
 
   type ZipCode       = ZipCode.Type
   type EmailAddress  = EmailAddress.Type
