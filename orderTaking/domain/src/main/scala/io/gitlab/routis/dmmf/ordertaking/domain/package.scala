@@ -9,7 +9,6 @@ package object domain:
   //
   type OrderId       = OrderId.Type
   type OrderLineId   = OrderLineId.Type
-  type OrderQuantity = OrderQuantity.Kilograms | OrderQuantity.Units
   type Price         = BigDecimal
   type BillingAmount = zio.prelude.newtypes.Sum[BigDecimal]
 

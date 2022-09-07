@@ -25,7 +25,7 @@ object App extends zio.ZIOAppDefault:
       customerInfo = UnvalidatedCustomerInfo("Babis", "Routis", "babis@yahoo.com", "Normal"),
       shippingAddress = ethnikisAntistaseos,
       billingAddress = ethnikisAntistaseos,
-      lines = List(line, line.copy(orderLineId = "old2", productCode = "W123")),
+      lines = List(line, line.copy(orderLineId = "old2", productCode = "G123")),
       // lines = List.empty,
       promotionCode = null
     )
