@@ -8,11 +8,25 @@ import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase.{
   UnvalidatedOrderLine
 }
 import io.gitlab.routis.dmmf.ordertaking.application.port.out.CheckAddressExists.CheckedAddress
-import io.gitlab.routis.dmmf.ordertaking.application.port.out.{ CheckAddressExists, CheckProductCodeExists }
+import io.gitlab.routis.dmmf.ordertaking.application.port.out.{
+  CheckAddressExists,
+  CheckProductCodeExists,
+  GetPromotionProductPrice,
+  GetStandardProductPrice
+}
 import io.gitlab.routis.dmmf.ordertaking.domain.ProductCode.value
-import zio.ZIO
+import io.gitlab.routis.dmmf.ordertaking.domain.{ ProductCode, PromotionCode }
+import zio.{ UIO, ZIO }
 
 object App extends zio.ZIOAppDefault:
+
+  private val standardPrices: GetStandardProductPrice = _ => ZIO.succeed(10)
+
+  private val promoPrices: GetPromotionProductPrice = (promoCode, _) =>
+    promoCode match
+      case PromotionCode("123") => ZIO.succeed(Some(5))
+      case _                    => ZIO.succeed(None)
+
   private val ethnikisAntistaseos =
     UnvalidatedAddress("Ethnikis Antistaseos 81A", "Vrilissia", null, null, "Athens", "15235")
   private val wrong =

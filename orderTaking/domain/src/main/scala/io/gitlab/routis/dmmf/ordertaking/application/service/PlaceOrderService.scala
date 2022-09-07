@@ -57,15 +57,12 @@ object PlaceOrderService:
     case Standard()
     case Promotion(code: PromotionCode)
   object PricingMethod:
-    def create(promotionCode: String): PricingMethod = makePromotionCode
-      .optional(Option(promotionCode))
-      .fold(
-        _ => Standard(),
-        x =>
-          x match
-            case Some(pc) => Promotion(pc)
-            case _        => Standard()
-      )
+    def create(promotionCode: String): PricingMethod =
+      Option(promotionCode)
+        .filter(_.nonEmpty)
+        .flatMap(it => PromotionCode.make(it).toOption.map(Promotion.apply))
+        .getOrElse(Standard())
+
   case class PricedOrder(
     orderId: OrderId,
     customerInfo: CustomerInfo,
@@ -76,7 +73,7 @@ object PlaceOrderService:
     pricingMethod: PricingMethod
   )
   trait GetPrice:
-    def getPrice(line: ValidatedOrderLine): IO[PricingError, PricedOrderLine]
+    def priceOrder(validatedOrder: ValidatedOrder): IO[PricingError, PricedOrder]
 
   //
   // Dependency Injection
