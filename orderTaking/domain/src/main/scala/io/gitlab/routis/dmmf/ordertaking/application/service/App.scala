@@ -15,7 +15,7 @@ import io.gitlab.routis.dmmf.ordertaking.application.port.out.{
   GetStandardProductPrice
 }
 
-import io.gitlab.routis.dmmf.ordertaking.domain.{ MoneyUtils, Price, ProductCode, PromotionCode }
+import io.gitlab.routis.dmmf.ordertaking.domain.{ Price, ProductCode, PromotionCode }
 import zio.{ UIO, ZIO }
 
 object App extends zio.ZIOAppDefault:
@@ -40,7 +40,6 @@ object App extends zio.ZIOAppDefault:
       shippingAddress = ethnikisAntistaseos,
       billingAddress = ethnikisAntistaseos,
       lines = List(line, line.copy(orderLineId = "old2", productCode = "G123")),
-      // lines = List.empty,
       promotionCode = null
     )
   import zio.given

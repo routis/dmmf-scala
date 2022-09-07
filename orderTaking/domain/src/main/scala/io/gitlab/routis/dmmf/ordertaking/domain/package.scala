@@ -11,7 +11,7 @@ package object domain:
   type OrderId       = OrderId.Type
   type OrderLineId   = OrderLineId.Type
   type Price         = Price.Type
-  type BillingAmount = JodaMoney // zio.prelude.newtypes.Sum[JodaMoney]
+  type BillingAmount = BillingAmount.Type // zio.prelude.newtypes.Sum[JodaMoney]
 
   type ZipCode       = ZipCode.Type
   type EmailAddress  = EmailAddress.Type

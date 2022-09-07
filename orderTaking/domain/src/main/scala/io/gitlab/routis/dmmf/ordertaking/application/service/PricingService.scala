@@ -1,5 +1,6 @@
 package io.gitlab.routis.dmmf.ordertaking.application.service
-import io.gitlab.routis.dmmf.ordertaking.domain.{ OrderQuantity, Price, ProductCode }
+
+import io.gitlab.routis.dmmf.ordertaking.domain.{ BillingAmount, OrderQuantity, Price, ProductCode }
 import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase.PlaceOrderError
 import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase.PlaceOrderError.PricingError
 import io.gitlab.routis.dmmf.ordertaking.application.port.out.{ GetPromotionProductPrice, GetStandardProductPrice }
@@ -12,6 +13,7 @@ import io.gitlab.routis.dmmf.ordertaking.application.service.PlaceOrderService.{
   ValidatedOrder,
   ValidatedOrderLine
 }
+import zio.prelude.Validation
 import zio.{ IO, NonEmptyChunk, UIO, ZIO }
 
 private[service] case class PricingService(
@@ -19,16 +21,14 @@ private[service] case class PricingService(
   promoPrices: GetPromotionProductPrice
 ) extends PriceOrder:
 
+  import PricingService.toIO
   override def priceOrder(validatedOrder: ValidatedOrder): IO[PricingError, PricedOrder] =
-    import zio.prelude.*
-    import io.gitlab.routis.dmmf.ordertaking.domain.MoneyUtils.JodaMoneyAdditionIsIdentity
+    val pricingMethod = validatedOrder.pricingMethod
+    val toPriced      = toPricedOrderLine(pricingMethod)
     for
-      _                <- ZIO.unit
-      pricingMethod     = validatedOrder.pricingMethod
-      pricingFunction   = toPricedOrderLine(pricingMethod)
-      lines            <- ZIO.collectAllPar(validatedOrder.lines.map(pricingFunction))
+      lines            <- ZIO.collectAllPar(validatedOrder.lines.map(toPriced))
       linesWithComments = addCommentLine(pricingMethod)(lines)
-      amountToBill      = lines.foldMap(line => Price.unwrap(line.price))
+      amountToBill     <- BillingAmount.total(lines.map(_.price)).toIO
     yield PricedOrder(
       validatedOrder.orderId,
       validatedOrder.customerInfo,
@@ -39,16 +39,16 @@ private[service] case class PricingService(
       pricingMethod
     )
 
-  def toPricedOrderLine(pricingMethod: PricingMethod)(line: ValidatedOrderLine): IO[PricingError, PricedOrderLine] =
-    import Validations.toIO
-    import Price.multipliedBy
+  private def toPricedOrderLine(
+    pricingMethod: PricingMethod
+  )(line: ValidatedOrderLine): IO[PricingError, PricedOrderLine] =
     for
       productPrice <- getProductPrice(line.productCode, pricingMethod)
-      qty           = line.quantity.value
-      linePrice    <- productPrice.multipliedBy(qty).toIO.mapError[PricingError](es => PricingError(es.head))
+      qty           = line.quantity.value.toLong
+      linePrice    <- (productPrice * qty).toIO
     yield PricedOrderLine.PricedOrderProductLine(line.orderLineId, line.productCode, line.quantity, linePrice)
 
-  def getProductPrice(productCode: ProductCode, pricingMethod: PricingMethod): UIO[Price] =
+  private def getProductPrice(productCode: ProductCode, pricingMethod: PricingMethod): UIO[Price] =
     pricingMethod match
       case PricingMethod.Standard() => standardPrices.getStandardProductPrice(productCode)
       case PricingMethod.Promotion(promotionCode) =>
@@ -57,6 +57,7 @@ private[service] case class PricingService(
           .someOrElseZIO(standardPrices.getStandardProductPrice(productCode))
 
 private[service] object PricingService:
+
   def addCommentLine(pricingMethod: PricingMethod)(
     lines: NonEmptyChunk[PricedOrderLine]
   ): NonEmptyChunk[PricedOrderLine] =
@@ -64,3 +65,8 @@ private[service] object PricingService:
       case PricingMethod.Standard() => lines
       case PricingMethod.Promotion(promotionCode) =>
         lines :+ PricedOrderLine.Comment(s"Applied promotion $promotionCode")
+
+  extension [A](v: Validation[String, A])
+    def toIO: zio.IO[PricingError, A] =
+      import Validations.toIO as valToIo
+      v.valToIo.mapError[PricingError](es => PricingError(es.head))
