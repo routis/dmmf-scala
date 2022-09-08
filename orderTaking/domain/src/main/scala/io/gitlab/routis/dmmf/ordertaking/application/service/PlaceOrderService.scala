@@ -62,7 +62,7 @@ object PlaceOrderService:
     def price: Price =
       this match
         case PricedOrderProductLine(_, _, _, linePrice) => linePrice
-        case Comment(_)                                 => Price.zero
+        case Comment(_)                                 => Price(0)
 
     case PricedOrderProductLine(
       orderLineId: OrderLineId,

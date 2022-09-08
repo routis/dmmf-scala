@@ -20,11 +20,11 @@ import zio.{ UIO, ZIO }
 
 object App extends zio.ZIOAppDefault:
 
-  private val standardPrices: GetStandardProductPrice = _ => ZIO.succeed(Price.makeUnsafe(10))
+  private val standardPrices: GetStandardProductPrice = _ => ZIO.succeed(Price(10))
 
   private val promoPrices: GetPromotionProductPrice = (promoCode, _) =>
     promoCode match
-      case PromotionCode("123") => ZIO.succeed(Some(Price.makeUnsafe(5)))
+      case PromotionCode("123") => ZIO.succeed(Some(Price(5)))
       case _                    => ZIO.succeed(None)
 
   private val ethnikisAntistaseos =

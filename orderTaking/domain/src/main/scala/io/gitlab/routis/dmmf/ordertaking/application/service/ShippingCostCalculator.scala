@@ -8,9 +8,9 @@ private[service] case class ShippingCostCalculator() extends PlaceOrderService.C
     import ShippingCostCalculator.{ area, Area }
     import Area.*
     area(pricedOrder.shippingAddress) match
-      case Local         => Price.makeUnsafe(5)
-      case EU            => Price.makeUnsafe(10)
-      case International => Price.makeUnsafe(20)
+      case Local         => Price(5)
+      case EU            => Price(10)
+      case International => Price(20)
 
 private[service] object ShippingCostCalculator:
 
