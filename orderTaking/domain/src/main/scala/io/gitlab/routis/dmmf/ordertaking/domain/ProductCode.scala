@@ -28,8 +28,6 @@ object ProductCode:
       matches("\\AW\\d{4}\\z".r)
 
   def make(value: String): Validation[String, ProductCode] =
-    WidgetCode
-      .make(value)
-      .map(Widget.apply)
-      .orElse(GizmoCode.make(value).map(Gizmo.apply))
-      .mapError(_ => "Neither Widget nor Gizmo")
+    def tryGizmo  = GizmoCode.make(value).map(Gizmo.apply)
+    def tryWidget = WidgetCode.make(value).map(Widget.apply)
+    tryWidget.orElse(tryGizmo).mapError(_ => "Neither Widget nor Gizmo")

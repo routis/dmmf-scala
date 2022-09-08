@@ -6,6 +6,4 @@ import zio.prelude.Assertion.matches
 import scala.util.matching.Regex
 
 object ZipCode extends Subtype[String]:
-  val regex: Regex = "^\\d{5}$".r
-
-  override inline def assertion: Assertion[String] = matches(regex)
+  override inline def assertion: Assertion[String] = matches("^\\d{5}$".r)
