@@ -2,20 +2,21 @@ package io.gitlab.routis.dmmf.ordertaking.domain
 
 import zio.prelude.{ Assertion, Newtype, Subtype, Validation }
 import zio.prelude.Assertion.{ greaterThanOrEqualTo, lessThanOrEqualTo }
+import io.gitlab.routis.dmmf.ordertaking.domain.OrderQuantity.{ KilogramsQuantity, UnitsQuantity }
 
-sealed trait OrderQuantity:
-  import io.gitlab.routis.dmmf.ordertaking.domain.OrderQuantity.{ Kilograms, KilogramsQuantity, Units, UnitsQuantity }
+enum OrderQuantity:
   def value: Double =
     this match
       case Kilograms(kilograms) => kilograms
       case Units(units)         => units.toDouble
+
+  case Kilograms(quantity: KilogramsQuantity) extends OrderQuantity
+
+  case Units(quantity: UnitsQuantity) extends OrderQuantity
 object OrderQuantity:
 
   type KilogramsQuantity = OrderQuantity.KilogramsQuantity.Type
   type UnitsQuantity     = OrderQuantity.UnitsQuantity.Type
-
-  final case class Kilograms(quantity: KilogramsQuantity) extends OrderQuantity
-  final case class Units(quantity: UnitsQuantity)         extends OrderQuantity
 
   object KilogramsQuantity extends Subtype[Double]:
     override inline def assertion: Assertion[Double] =
