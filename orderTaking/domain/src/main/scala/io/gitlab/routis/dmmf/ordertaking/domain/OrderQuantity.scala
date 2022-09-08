@@ -27,7 +27,7 @@ object OrderQuantity:
 
   def forProduct(productCode: ProductCode)(value: Double): Validation[String, OrderQuantity] =
     productCode match
-      case _: ProductCode.GizmoCode =>
+      case _: ProductCode.Gizmo =>
         KilogramsQuantity.make(value).map(Kilograms.apply)
-      case _: ProductCode.WidgetCode =>
+      case _: ProductCode.Widget =>
         UnitsQuantity.make(value.intValue()).map(Units.apply)

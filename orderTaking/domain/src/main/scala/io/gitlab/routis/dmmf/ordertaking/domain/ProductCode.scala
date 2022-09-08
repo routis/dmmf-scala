@@ -2,34 +2,34 @@ package io.gitlab.routis.dmmf.ordertaking.domain
 
 import zio.prelude.{ Assertion, Subtype, Validation }
 import zio.prelude.Assertion.matches
+import io.gitlab.routis.dmmf.ordertaking.domain.ProductCode.{ GizmoCode, WidgetCode }
+enum ProductCode:
+  self =>
+  def value: String =
+    self match
+      case Gizmo(code)  => code
+      case Widget(code) => code
 
-sealed trait ProductCode
+  case Gizmo(code: GizmoCode) extends ProductCode
+
+  case Widget(code: WidgetCode) extends ProductCode
 
 object ProductCode:
 
-  type Gizmo  = Gizmo.Type
-  type Widget = Widget.Type
+  type GizmoCode  = GizmoCode.Type
+  type WidgetCode = WidgetCode.Type
 
-  object Widget extends Subtype[String]:
-    override inline def assertion: Assertion[String] =
-      matches("\\AW\\d{4}\\z".r)
-
-  object Gizmo extends Subtype[String]:
+  object GizmoCode extends Subtype[String]:
     override inline def assertion: Assertion[String] =
       matches("\\AG\\d{3}\\z".r)
 
-  case class GizmoCode(gizmo: Gizmo) extends ProductCode
-
-  case class WidgetCode(widget: Widget) extends ProductCode
-
-  def value(productCode: ProductCode): String =
-    productCode match
-      case GizmoCode(gizmo)   => gizmo
-      case WidgetCode(widget) => widget
+  object WidgetCode extends Subtype[String]:
+    override inline def assertion: Assertion[String] =
+      matches("\\AW\\d{4}\\z".r)
 
   def make(value: String): Validation[String, ProductCode] =
-    Widget
+    WidgetCode
       .make(value)
-      .map(WidgetCode.apply)
-      .orElse(Gizmo.make(value).map(GizmoCode.apply))
+      .map(Widget.apply)
+      .orElse(GizmoCode.make(value).map(Gizmo.apply))
       .mapError(_ => "Neither Widget nor Gizmo")
