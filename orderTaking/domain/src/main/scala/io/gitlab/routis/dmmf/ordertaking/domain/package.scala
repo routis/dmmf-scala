@@ -109,28 +109,28 @@ package object domain:
   import zio.NonEmptyChunk
   import ValidationError.{ causeOf, fieldError, indexFieldError, missingField }
 
-  extension [A, E, B](smartConstructor: SmartConstructor[A, E, B])
+  extension [A, E, B](self: SmartConstructor[A, E, B])
 
     def changeError[E1](f: E => E1): SmartConstructor[A, E1, B] =
-      smartConstructor.andThen(_.mapError(f))
+      self.andThen(_.mapError(f))
 
     def required(ifMissing: => E): SmartConstructor[Option[A], E, B] =
       optionA =>
         optionA match
-          case Some(a) => smartConstructor(a)
+          case Some(a) => self(a)
           case None    => Validation.fail(ifMissing)
 
     def optional: SmartConstructor[Option[A], E, Option[B]] =
       optionA =>
         optionA match
-          case Some(a) => smartConstructor(a).map(Some.apply)
+          case Some(a) => self(a).map(Some.apply)
           case None    => Validation.succeed(None)
 
     def nest(fieldName: FieldName): SmartConstructor[A, ValidationError, B] =
-      smartConstructor.changeError(fieldError(fieldName, _))
+      self.changeError(fieldError(fieldName, _))
 
     def requiredFieldFromOption(field: FieldName, oa: Option[A]): Validation[ValidationError, B] =
-      smartConstructor
+      self
         .changeError(fieldError(field, _))
         .required(missingField(field))(oa)
 
@@ -138,7 +138,7 @@ package object domain:
       requiredFieldFromOption(field, Option(a))
 
     def optionalFieldFromOption(field: FieldName, optionA: Option[A]): Validation[ValidationError, Option[B]] =
-      smartConstructor.changeError(fieldError(field, _)).optional(optionA)
+      self.changeError(fieldError(field, _)).optional(optionA)
 
     def optionalField(field: FieldName, a: A): Validation[ValidationError, Option[B]] =
       optionalFieldFromOption(field, Option(a))
@@ -151,6 +151,6 @@ package object domain:
         .fromEither(maybeNEC)
         .flatMap(nec =>
           Validation.validateAll(nec.zipWithIndex.map { (a, index) =>
-            smartConstructor.changeError(causeOf.andThen(indexFieldError(fieldName, index)))(a)
+            self.changeError(causeOf.andThen(indexFieldError(fieldName, index)))(a)
           })
         )
