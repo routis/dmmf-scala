@@ -29,6 +29,7 @@ object Money:
     def +(other: Money): Money = self.plus(other)
     @targetName("*")
     def *(times: Long): Money = self.multipliedBy(times)
+    def amount: BigDecimal    = self.getAmount
 
   given MoneyAdditionIsIdentity: Identity[Money] with
     override def identity: Money = zero
