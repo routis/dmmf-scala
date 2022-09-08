@@ -1,7 +1,7 @@
 package io.gitlab.routis.dmmf.ordertaking.domain
 
 import zio.prelude
-import zio.prelude.Validation
+import zio.prelude.{ Identity, Validation }
 
 import scala.annotation.targetName
 import scala.util.Try
@@ -9,12 +9,15 @@ import scala.util.Try
 import org.joda.money.Money as JodaMoney
 import org.joda.money.CurrencyUnit as JodaCurrencyUnit
 
+/**
+ * [[Money]] represents a money amount for a specific currency.
+ * The currency is fixed and cannot be changed at runtime
+ */
 opaque type Money = JodaMoney
 object Money:
-  private val EUR: JodaCurrencyUnit = JodaCurrencyUnit.EUR
-  val zero: Money                   = Money(0)
 
-  def apply(amount: BigDecimal): Money = JodaMoney.of(EUR, amount.bigDecimal)
+  val zero: Money                      = Money(0)
+  def apply(amount: BigDecimal): Money = JodaMoney.of(JodaCurrencyUnit.EUR, amount.bigDecimal)
 
   def make(amount: BigDecimal): Validation[String, Money] =
     Validation
@@ -27,7 +30,7 @@ object Money:
     @targetName("*")
     def *(times: Long): Money = self.multipliedBy(times)
 
-  given MoneyAdditionIsIdentity: zio.prelude.Identity[Money] with
+  given MoneyAdditionIsIdentity: Identity[Money] with
     override def identity: Money = zero
 
     override def combine(l: => Money, r: => Money): Money = l + r
