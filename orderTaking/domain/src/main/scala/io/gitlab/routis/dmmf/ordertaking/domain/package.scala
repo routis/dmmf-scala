@@ -15,6 +15,7 @@ package object domain:
   type ZipCode       = ZipCode.Type
   type EmailAddress  = EmailAddress.Type
   type PromotionCode = PromotionCode.Type
+  type String50      = String50.Type
 
   //
   // Constructors for simple types

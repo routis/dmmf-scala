@@ -1,12 +1,9 @@
 package io.gitlab.routis.dmmf.ordertaking.domain
 
-import zio.prelude.Validation
+import zio.prelude.{ Assertion, Subtype, Validation }
+import Assertion.matches
 
-class String50 private (val value: String) extends AnyVal:
-  override def toString = s"$value"
+import scala.util.matching.Regex
 
-object String50:
-
-  def make(value: String): Validation[String, String50] =
-    if value.length <= 50 then Validation.succeed(new String50(value))
-    else Validation.fail("Value exceeds 50")
+object String50 extends Subtype[String]:
+  override inline def assertion: Assertion[String] = matches("^(?=[\\S\\s]{1,50}$)[\\S\\s]*".r)

@@ -31,8 +31,8 @@ object Application:
     object CustomerInfoDto:
       def fromDomain(domain: CustomerInfo): CustomerInfoDto =
         CustomerInfoDto(
-          firstName = domain.name.fistName.value,
-          lastName = domain.name.lastName.value,
+          firstName = domain.name.fistName,
+          lastName = domain.name.lastName,
           emailAddress = EmailAddress.unwrap(domain.emailAddress),
           vipStatus = domain.vipStatus.name
         )
@@ -70,11 +70,11 @@ object Application:
     object AddressDto:
       def fromDomain(domain: Address): AddressDto =
         AddressDto(
-          addressLine1 = domain.addressLine1.value,
-          addressLine2 = domain.addressLine2.map(_.value).orNull,
-          addressLine3 = domain.addressLine3.map(_.value).orNull,
-          addressLine4 = domain.addressLine4.map(_.value).orNull,
-          city = domain.city.value,
+          addressLine1 = domain.addressLine1,
+          addressLine2 = domain.addressLine2.orNull,
+          addressLine3 = domain.addressLine3.orNull,
+          addressLine4 = domain.addressLine4.orNull,
+          city = domain.city,
           zipCode = ZipCode.unwrap(domain.zipCode)
         )
 
