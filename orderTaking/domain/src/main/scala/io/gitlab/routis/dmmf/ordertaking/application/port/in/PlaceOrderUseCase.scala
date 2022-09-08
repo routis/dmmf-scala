@@ -41,15 +41,14 @@ object PlaceOrderUseCase:
 
   case class ShippableOrderLine(productCode: ProductCode, quantity: OrderQuantity)
 
+  /**
+   * The possible events resulting from the PlaceOrder workflow
+   * Not all events will occur, depending on the logic of the workflow
+   */
   enum PlaceOrderEvent:
 
-    case ShippableOrderSent(
-      orderId: OrderId,
-      shippingAddress: Address,
-      billingAddress: Address,
-      lines: NonEmptyChunk[ShippableOrderLine],
-      promotionCode: PromotionCode
-    ) extends PlaceOrderEvent
+    case ShippableOrderSent(orderId: OrderId, shippingAddress: Address, lines: NonEmptyChunk[ShippableOrderLine])
+        extends PlaceOrderEvent
 
     case BillableOrderPlaced(orderId: OrderId, billingAddress: Address, billingAmount: BillingAmount)
         extends PlaceOrderEvent

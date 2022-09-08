@@ -1,17 +1,18 @@
 package io.gitlab.routis.dmmf.ordertaking.domain
 
 import MoneySupport.Money
-import zio.prelude.{ Assertion, Newtype, Validation }
+import zio.prelude.{ Assertion, Subtype, Validation }
+import Assertion.*
 
 import scala.annotation.targetName
 
-object Price extends Newtype[Money]:
+object Price extends Subtype[Money]:
 
   val zero: Price = Price.makeUnsafe(0)
 
   override inline def assertion: Assertion[Money] =
     import MoneySupport.Money.MoneyHasOrdering
-    Assertion.greaterThanOrEqualTo(Money.zero) && Assertion.lessThanOrEqualTo(Money(1000))
+    greaterThanOrEqualTo(Money.zero) && lessThanOrEqualTo(Money(1000))
 
   def make(amount: BigDecimal): Validation[String, Price.Type] =
     Money.make(amount).flatMap(make)
@@ -22,10 +23,7 @@ object Price extends Newtype[Money]:
       .toEitherWith(es => new IllegalArgumentException(es.head))
       .fold(throw _, identity)
 
-  extension (price: Price)
+  extension (self: Price)
     @targetName("*")
     def *(times: Long): Validation[String, Price.Type] =
-      val money: Money = Price.unwrap(price)
-      make(money * times)
-
-    def toMoney: Money = Price.unwrap(price)
+      make(unwrap(self) * times)

@@ -7,8 +7,8 @@ sealed trait OrderQuantity:
   import io.gitlab.routis.dmmf.ordertaking.domain.OrderQuantity.{ Kilograms, KilogramsQuantity, Units, UnitsQuantity }
   def value: Double =
     this match
-      case Kilograms(kilograms) => KilogramsQuantity.unwrap(kilograms)
-      case Units(units)         => UnitsQuantity.unwrap(units).toDouble
+      case Kilograms(kilograms) => kilograms
+      case Units(units)         => units.toDouble
 object OrderQuantity:
 
   type KilogramsQuantity = OrderQuantity.KilogramsQuantity.Type
@@ -19,11 +19,11 @@ object OrderQuantity:
 
   object KilogramsQuantity extends Subtype[Double]:
     override inline def assertion: Assertion[Double] =
-      greaterThanOrEqualTo(0d).&&(lessThanOrEqualTo(100d))
+      greaterThanOrEqualTo(0d) && lessThanOrEqualTo(100d)
 
   object UnitsQuantity extends Subtype[Int]:
     override inline def assertion: Assertion[Int] =
-      greaterThanOrEqualTo(0).&&(lessThanOrEqualTo(1000))
+      greaterThanOrEqualTo(0) && lessThanOrEqualTo(1000)
 
   def forProduct(productCode: ProductCode)(value: Double): Validation[String, OrderQuantity] =
     productCode match

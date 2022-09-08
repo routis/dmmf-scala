@@ -1,19 +1,19 @@
 package io.gitlab.routis.dmmf.ordertaking.domain
 
+import zio.prelude
 import zio.prelude.Validation
 
 import scala.annotation.targetName
 import scala.util.Try
 
+import org.joda.money.Money as JodaMoney
+import org.joda.money.CurrencyUnit as JodaCurrencyUnit
 object MoneySupport:
-
-  import org.joda.money.Money as JodaMoney
 
   opaque type Money = JodaMoney
   object Money:
-    import org.joda.money.CurrencyUnit as JodaCurrencyUnit
-
     private val EUR: JodaCurrencyUnit = JodaCurrencyUnit.EUR
+    val zero: Money                   = Money(0)
 
     def apply(amount: BigDecimal): Money = JodaMoney.of(EUR, amount.bigDecimal)
 
@@ -22,13 +22,11 @@ object MoneySupport:
         .fromTry(Try(Money(amount)))
         .mapError(t => s"Not a valid amount. ${t.getMessage}")
 
-    val zero: Money = Money(0)
-
-    extension (money: Money)
+    extension (self: Money)
       @targetName("+")
-      def +(other: Money): Money = money.plus(other)
+      def +(other: Money): Money = self.plus(other)
       @targetName("*")
-      def *(times: Long): Money = money.multipliedBy(times)
+      def *(times: Long): Money = self.multipliedBy(times)
 
     given MoneyAdditionIsIdentity: zio.prelude.Identity[Money] with
       override def identity: Money = zero

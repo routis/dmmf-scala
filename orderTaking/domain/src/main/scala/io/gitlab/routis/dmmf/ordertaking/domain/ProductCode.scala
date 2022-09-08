@@ -24,8 +24,8 @@ object ProductCode:
 
   def value(productCode: ProductCode): String =
     productCode match
-      case GizmoCode(gizmo)   => Gizmo.unwrap(gizmo)
-      case WidgetCode(widget) => Widget.unwrap(widget)
+      case GizmoCode(gizmo)   => gizmo
+      case WidgetCode(widget) => widget
 
   def make(value: String): Validation[String, ProductCode] =
     Widget
