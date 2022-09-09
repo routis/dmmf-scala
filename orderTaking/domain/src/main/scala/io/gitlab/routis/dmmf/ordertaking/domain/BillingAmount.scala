@@ -11,6 +11,7 @@ object BillingAmount extends Subtype[Money]:
 
   def total(prices: NonEmptyChunk[Price]): Validation[String, BillingAmount] =
     import zio.prelude.*
+
     def sum(ms: NonEmptyChunk[Money]): Money =
       import Money.MoneyAdditionIsIdentity
       ms.reduceIdentity

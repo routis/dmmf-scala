@@ -31,33 +31,6 @@ package object domain:
   val makeString50: SmartConstructor[String, String, String50]           = String50.make
   val makeVipStatus: SmartConstructor[String, String, VipStatus]         = VipStatus.make
   val makePromotionCode: SmartConstructor[String, String, PromotionCode] = PromotionCode.make
-  //
-  // Constructors for compound types (Value objects in DDD terms)
-  //
-  def makePersonalName[E](
-    firstName: Validation[E, String50],
-    lastName: Validation[E, String50]
-  ): Validation[E, PersonalName] =
-    Validation.validateWith(firstName, lastName)(PersonalName.apply)
-
-  def makeAddress[E](
-    addressLine1: Validation[E, String50],
-    addressLine2: Validation[E, Option[String50]],
-    addressLine3: Validation[E, Option[String50]],
-    addressLine4: Validation[E, Option[String50]],
-    city: Validation[E, String50],
-    zipCode: Validation[E, ZipCode]
-  ): Validation[E, Address] =
-    Validation
-      .validateWith(addressLine1, addressLine2, addressLine3, addressLine4, city, zipCode)(Address.apply)
-
-  def makeCustomerInfo[E](
-    name: Validation[E, PersonalName],
-    emailAddress: Validation[E, EmailAddress],
-    vipStatus: Validation[E, VipStatus]
-  ): Validation[E, CustomerInfo] =
-    Validation
-      .validateWith(name, emailAddress, vipStatus)(CustomerInfo.apply)
 
   //
   // Validation Error

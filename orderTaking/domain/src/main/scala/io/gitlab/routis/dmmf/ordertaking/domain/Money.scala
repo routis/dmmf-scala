@@ -16,13 +16,17 @@ import org.joda.money.CurrencyUnit as JodaCurrencyUnit
 opaque type Money = JodaMoney
 object Money:
 
-  val zero: Money                      = Money(0)
   def apply(amount: BigDecimal): Money = JodaMoney.of(JodaCurrencyUnit.EUR, amount.bigDecimal)
 
   def make(amount: BigDecimal): Validation[String, Money] =
     Validation
       .fromTry(Try(Money(amount)))
-      .mapError(t => s"Not a valid amount. ${t.getMessage}")
+      .mapError(t => s"$amount is not a valid amount. ${t.getMessage}")
+
+  def total(ms: Iterable[Money]): Money =
+    import zio.prelude.*
+    import Money.MoneyAdditionIsIdentity
+    ms.reduceIdentity
 
   extension (self: Money)
     @targetName("+")
@@ -32,9 +36,8 @@ object Money:
     def amount: BigDecimal    = self.getAmount
 
   given MoneyAdditionIsIdentity: Identity[Money] with
-    override def identity: Money = zero
-
+    override def identity: Money                          = Money(0)
     override def combine(l: => Money, r: => Money): Money = l + r
 
-  given MoneyHasOrdering: Ordering[Money] with
-    override def compare(l: Money, r: Money): Int = l.compareTo(r)
+  given MoneyIsOrdering: Ordering[Money] with
+    override def compare(x: Money, y: Money): Int = x.compareTo(y)

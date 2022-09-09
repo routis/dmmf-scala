@@ -166,7 +166,7 @@ private[service] object PlaceOrderValidationService:
       .validateWith(orderLineId, productCode, quantity)(ValidatedOrderLine.apply)
 
   def toCustomerInfo(customerInfo: UnvalidatedCustomerInfo): DomainValidation[CustomerInfo] =
-    makeCustomerInfo(
+    CustomerInfo.make(
       toPersonalName(customerInfo.firstName, customerInfo.lastName),
       makeEmailAddress.requiredField("emailAddress", customerInfo.emailAddress),
       makeVipStatus.requiredField("vipStatus", customerInfo.vipStatus)
@@ -174,7 +174,7 @@ private[service] object PlaceOrderValidationService:
 
   def toAddress(checkedAddress: CheckedAddress): DomainValidation[Address] =
     val addr = checkedAddress.unvalidatedAddress
-    makeAddress(
+    Address.make(
       makeString50.requiredField("addressLine1", addr.addressLine1),
       makeString50.optionalField("addressLine2", addr.addressLine2),
       makeString50.optionalField("addressLine3", addr.addressLine3),
@@ -184,7 +184,7 @@ private[service] object PlaceOrderValidationService:
     )
 
   def toPersonalName(firstName: String, lastName: String): DomainValidation[PersonalName] =
-    makePersonalName(
+    PersonalName.make(
       makeString50.requiredField("firstName", firstName),
       makeString50.requiredField("lastName", lastName)
     )
