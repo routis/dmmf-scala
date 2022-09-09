@@ -1,12 +1,9 @@
 import BuildHelper.stdSettings
 
-ThisBuild / scalaVersion      := "3.1.3"
-ThisBuild / organization      := "io.gitlab.routis.dmmf"
-ThisBuild / semanticdbEnabled := true
-ThisBuild / semanticdbVersion := scalafixSemanticdb.revision
+ThisBuild / scalaVersion := "3.1.3"
+ThisBuild / organization := "io.gitlab.routis.dmmf"
 
 addCommandAlias("fmt", "all scalafmtSbt scalafmt test:scalafmt")
-addCommandAlias("fix", "; all compile:scalafix test:scalafix; all scalafmtSbt scalafmtAll")
 
 lazy val orderTaking = (project in file("."))
   .aggregate(orderTakingDomain, orderTakingInfrastructure)
@@ -39,5 +36,3 @@ lazy val orderTakingInfrastructureDB =
 def module(moduleName: String, fileName: String): Project =
   Project(moduleName, file(fileName))
     .settings(stdSettings(moduleName))
-
-addCommandAlias("fmt", "scalafmtAll")

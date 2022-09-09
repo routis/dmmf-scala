@@ -11,12 +11,12 @@ case class Address(
 object Address:
   import zio.prelude.Validation
   def make[E](
-    addressLine1: Validation[E, String50],
-    addressLine2: Validation[E, Option[String50]],
-    addressLine3: Validation[E, Option[String50]],
-    addressLine4: Validation[E, Option[String50]],
-    city: Validation[E, String50],
-    zipCode: Validation[E, ZipCode]
+    addressLine1: => Validation[E, String50],
+    addressLine2: => Validation[E, Option[String50]],
+    addressLine3: => Validation[E, Option[String50]],
+    addressLine4: => Validation[E, Option[String50]],
+    city: => Validation[E, String50],
+    zipCode: => Validation[E, ZipCode]
   ): Validation[E, Address] =
     Validation
       .validateWith(addressLine1, addressLine2, addressLine3, addressLine4, city, zipCode)(Address.apply)

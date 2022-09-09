@@ -1,30 +1,28 @@
 package io.gitlab.routis.dmmf.ordertaking.domain
 
 import zio.prelude.{ Assertion, Newtype, Subtype, Validation }
-import zio.prelude.Assertion.{ greaterThanOrEqualTo, lessThanOrEqualTo }
+import zio.prelude.Assertion.{ between, greaterThanOrEqualTo, lessThanOrEqualTo }
 import io.gitlab.routis.dmmf.ordertaking.domain.OrderQuantity.{ KilogramsQuantity, UnitsQuantity }
 
 enum OrderQuantity:
-  def value: Double =
-    this match
-      case Kilograms(kilograms) => kilograms
-      case Units(units)         => units.toDouble
+  self =>
+  def value: Double = self match
+    case Kilograms(kilograms) => kilograms
+    case Units(units)         => units.toDouble
 
-  case Kilograms(quantity: KilogramsQuantity) extends OrderQuantity
+  case Kilograms(quantity: KilogramsQuantity)
 
-  case Units(quantity: UnitsQuantity) extends OrderQuantity
+  case Units(quantity: UnitsQuantity)
 object OrderQuantity:
 
   type KilogramsQuantity = OrderQuantity.KilogramsQuantity.Type
   type UnitsQuantity     = OrderQuantity.UnitsQuantity.Type
 
   object KilogramsQuantity extends Subtype[Double]:
-    override inline def assertion: Assertion[Double] =
-      greaterThanOrEqualTo(0d) && lessThanOrEqualTo(100d)
+    override inline def assertion: Assertion[Double] = between(0d, 100d)
 
   object UnitsQuantity extends Subtype[Int]:
-    override inline def assertion: Assertion[Int] =
-      greaterThanOrEqualTo(0) && lessThanOrEqualTo(1000)
+    override inline def assertion: Assertion[Int] = between(0, 1000)
 
   def forProduct(productCode: ProductCode)(value: Double): Validation[String, OrderQuantity] =
     productCode match

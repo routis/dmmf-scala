@@ -5,14 +5,13 @@ import zio.prelude.Assertion.matches
 import io.gitlab.routis.dmmf.ordertaking.domain.ProductCode.{ GizmoCode, WidgetCode }
 enum ProductCode:
   self =>
-  def value: String =
-    self match
-      case Gizmo(code)  => code
-      case Widget(code) => code
+  def value: String = self match
+    case Gizmo(code)  => code
+    case Widget(code) => code
 
-  case Gizmo(code: GizmoCode) extends ProductCode
+  case Gizmo(code: GizmoCode)
 
-  case Widget(code: WidgetCode) extends ProductCode
+  case Widget(code: WidgetCode)
 
 object ProductCode:
 
@@ -20,12 +19,10 @@ object ProductCode:
   type WidgetCode = WidgetCode.Type
 
   object GizmoCode extends Subtype[String]:
-    override inline def assertion: Assertion[String] =
-      matches("\\AG\\d{3}\\z".r)
+    override inline def assertion: Assertion[String] = matches("\\AG\\d{3}\\z".r)
 
   object WidgetCode extends Subtype[String]:
-    override inline def assertion: Assertion[String] =
-      matches("\\AW\\d{4}\\z".r)
+    override inline def assertion: Assertion[String] = matches("\\AW\\d{4}\\z".r)
 
   def make(value: String): Validation[String, ProductCode] =
     def tryGizmo  = GizmoCode.make(value).map(Gizmo.apply)

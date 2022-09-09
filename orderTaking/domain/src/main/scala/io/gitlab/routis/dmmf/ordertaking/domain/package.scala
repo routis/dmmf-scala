@@ -2,9 +2,11 @@ package io.gitlab.routis.dmmf.ordertaking
 
 import io.gitlab.routis.dmmf.ordertaking.domain.ValidationError.missingField
 import org.joda.money.Money as JodaMoney
-import zio.prelude.Validation
+import zio.prelude.{ Assertion, Newtype, Subtype, Validation }
+import zio.prelude.Assertion.*
 
 package object domain:
+
   //
   // New types (Value objects in DDD terms)
   //
@@ -16,6 +18,19 @@ package object domain:
   type EmailAddress  = EmailAddress.Type
   type PromotionCode = PromotionCode.Type
   type String50      = String50.Type
+
+  //
+  // Constraint definitions
+  //
+  object OrderId     extends Newtype[String]
+  object OrderLineId extends Newtype[String]
+  object ZipCode extends Subtype[String]:
+    override inline def assertion: Assertion[String] = matches("^\\d{5}$".r)
+  object EmailAddress extends Subtype[String]:
+    override inline def assertion: Assertion[String] = matches("^(.+)@(.+)$".r)
+  object String50 extends Subtype[String]:
+    override inline def assertion: Assertion[String] = hasLength(between(1, 50))
+  object PromotionCode extends Newtype[String]
 
   //
   // Constructors for simple types
