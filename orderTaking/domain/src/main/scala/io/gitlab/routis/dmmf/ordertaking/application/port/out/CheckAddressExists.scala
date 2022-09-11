@@ -2,6 +2,10 @@ package io.gitlab.routis.dmmf.ordertaking.application.port.out
 
 import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase.UnvalidatedAddress
 import zio.IO
+
+/**
+ * Checks whether a given address is valid and exists
+ */
 trait CheckAddressExists:
 
   import CheckAddressExists.*
