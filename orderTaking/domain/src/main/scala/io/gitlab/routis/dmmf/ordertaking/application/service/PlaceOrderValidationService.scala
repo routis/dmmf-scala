@@ -180,6 +180,7 @@ private[service] object PlaceOrderValidationService:
       makeString50.optionalField("addressLine3", addr.addressLine3),
       makeString50.optionalField("addressLine4", addr.addressLine4),
       makeString50.requiredField("city", addr.city),
+      makeCountry.requiredField("country", addr.country),
       makeZipCode.requiredField("zipCode", addr.zipCode)
     )
 

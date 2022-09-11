@@ -21,6 +21,7 @@ object PlaceOrderUseCase:
     addressLine3: String,
     addressLine4: String,
     city: String,
+    country: String,
     zipCode: String
   )
 

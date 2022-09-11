@@ -65,6 +65,7 @@ object Application:
       addressLine3: String,
       addressLine4: String,
       city: String,
+      country: String,
       zipCode: String
     )
     object AddressDto:
@@ -75,6 +76,7 @@ object Application:
           addressLine3 = domain.addressLine3.orNull,
           addressLine4 = domain.addressLine4.orNull,
           city = domain.city,
+          country = domain.country,
           zipCode = ZipCode.unwrap(domain.zipCode)
         )
 
@@ -86,6 +88,7 @@ object Application:
             addressLine3 = dto.addressLine3,
             addressLine4 = dto.addressLine4,
             city = dto.city,
+            country = dto.country,
             zipCode = dto.zipCode
           )
         def toDomain: Validation[ValidationError, Address] =
@@ -95,6 +98,7 @@ object Application:
             addressLine3 <- makeString50.optionalField("addressLine3", dto.addressLine2)
             addressLine4 <- makeString50.optionalField("addressLine4", dto.addressLine2)
             city         <- makeString50.requiredField("city", dto.city)
+            country      <- makeCountry.requiredField("country", dto.country)
             zipCode      <- makeZipCode.requiredField("zipCode", dto.addressLine1)
           yield Address(
             addressLine1 = addressLine1,
@@ -102,6 +106,7 @@ object Application:
             addressLine3 = addressLine3,
             addressLine4 = addressLine4,
             city = city,
+            country = country,
             zipCode = zipCode
           )
     end AddressDto

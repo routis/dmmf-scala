@@ -28,7 +28,7 @@ object App extends zio.ZIOAppDefault:
       case _                    => ZIO.succeed(None)
 
   private val ethnikisAntistaseos =
-    UnvalidatedAddress("Ethnikis Antistaseos 81A", "Vrilissia", null, null, "Athens", "15235")
+    UnvalidatedAddress("Ethnikis Antistaseos 81A", "Vrilissia", null, null, "Athens", "GR", "15235")
   private val wrong =
     ethnikisAntistaseos.copy(zipCode = ethnikisAntistaseos.zipCode + "  ", addressLine2 = " ".repeat(60))
 

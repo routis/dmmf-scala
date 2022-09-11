@@ -6,6 +6,7 @@ case class Address(
   addressLine3: Option[String50],
   addressLine4: Option[String50],
   city: String50,
+  country: Country,
   zipCode: ZipCode
 )
 object Address:
@@ -16,7 +17,8 @@ object Address:
     addressLine3: => Validation[E, Option[String50]],
     addressLine4: => Validation[E, Option[String50]],
     city: => Validation[E, String50],
+    country: => Validation[E, Country],
     zipCode: => Validation[E, ZipCode]
   ): Validation[E, Address] =
     Validation
-      .validateWith(addressLine1, addressLine2, addressLine3, addressLine4, city, zipCode)(Address.apply)
+      .validateWith(addressLine1, addressLine2, addressLine3, addressLine4, city, country, zipCode)(Address.apply)

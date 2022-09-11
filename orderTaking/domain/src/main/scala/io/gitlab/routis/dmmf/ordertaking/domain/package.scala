@@ -15,6 +15,7 @@ package object domain:
   type Price         = Price.Type
   type BillingAmount = BillingAmount.Type
   type ZipCode       = ZipCode.Type
+  type Country       = Iso3166.Part1Alpha2.Type
   type EmailAddress  = EmailAddress.Type
   type PromotionCode = PromotionCode.Type
   type String50      = String50.Type
@@ -42,10 +43,37 @@ package object domain:
     OrderQuantity.forProduct(productCode)
 
   val makeZipCode: SmartConstructor[String, String, ZipCode]             = ZipCode.make
+  val makeCountry: SmartConstructor[String, String, Country]             = Iso3166.Part1Alpha2.make
   val makeEmailAddress: SmartConstructor[String, String, EmailAddress]   = EmailAddress.make
   val makeString50: SmartConstructor[String, String, String50]           = String50.make
   val makeVipStatus: SmartConstructor[String, String, VipStatus]         = VipStatus.make
   val makePromotionCode: SmartConstructor[String, String, PromotionCode] = PromotionCode.make
+
+  //
+  // Smart Constructor
+  //
+  type SmartConstructor[A, E, B] = A => Validation[E, B]
+
+  import zio.NonEmptyChunk
+  import ValidationError.{ causeOf, fieldError, indexFieldError, missingField }
+
+  object SmartConstructor:
+
+    def changeError[A, E, E1, B](sc: SmartConstructor[A, E, B])(f: E => E1): SmartConstructor[A, E1, B] =
+      sc.andThen(_.mapError(f))
+
+    def required[A, E, B](sc: SmartConstructor[A, E, B])(ifMissing: => E): SmartConstructor[Option[A], E, B] =
+      optionA =>
+        optionA match
+          case Some(a) => sc(a)
+          case None    => Validation.fail(ifMissing)
+
+    def optional[A, E, B](sc: SmartConstructor[A, E, B]): SmartConstructor[Option[A], E, Option[B]] =
+      optionA =>
+        optionA match
+          case Some(a) => sc(a).map(Some.apply)
+          case None    => Validation.succeed(None)
+  end SmartConstructor
 
   //
   // Validation Error
@@ -71,6 +99,7 @@ package object domain:
         case str: String         => Cause(str)
         case _                   => Cause(error.toString)
 
+    def fieldError[E](field: FieldName): E => ValidationError = error => fieldError(field, error)
     def fieldError(field: FieldName, error: Any): ValidationError =
       FieldError(field, causeOf(error))
 
@@ -89,56 +118,32 @@ package object domain:
 
   end ValidationError
 
-  //
-  // Smart Constructor
-  //
-  type SmartConstructor[A, E, B] = A => Validation[E, B]
-
-  import zio.NonEmptyChunk
-  import ValidationError.{ causeOf, fieldError, indexFieldError, missingField }
-
   extension [A, E, B](self: SmartConstructor[A, E, B])
 
-    def changeError[E1](f: E => E1): SmartConstructor[A, E1, B] =
-      self.andThen(_.mapError(f))
-
-    def required(ifMissing: => E): SmartConstructor[Option[A], E, B] =
-      optionA =>
-        optionA match
-          case Some(a) => self(a)
-          case None    => Validation.fail(ifMissing)
-
-    def optional: SmartConstructor[Option[A], E, Option[B]] =
-      optionA =>
-        optionA match
-          case Some(a) => self(a).map(Some.apply)
-          case None    => Validation.succeed(None)
-
     def nest(fieldName: FieldName): SmartConstructor[A, ValidationError, B] =
-      self.changeError(fieldError(fieldName, _))
+      SmartConstructor.changeError(self)(fieldError(fieldName))
 
-    def requiredFieldFromOption(field: FieldName, oa: Option[A]): Validation[ValidationError, B] =
-      self
-        .changeError(fieldError(field, _))
-        .required(missingField(field))(oa)
+    def requiredFieldFromOption(fieldName: FieldName, oa: Option[A]): Validation[ValidationError, B] =
+      SmartConstructor.required(self.nest(fieldName))(missingField(fieldName))(oa)
 
-    def requiredField(field: FieldName, a: A): Validation[ValidationError, B] =
-      requiredFieldFromOption(field, Option(a))
+    def requiredField(fieldName: FieldName, a: A): Validation[ValidationError, B] =
+      requiredFieldFromOption(fieldName, Option(a))
 
-    def optionalFieldFromOption(field: FieldName, optionA: Option[A]): Validation[ValidationError, Option[B]] =
-      self.changeError(fieldError(field, _)).optional(optionA)
+    def optionalFieldFromOption(fieldName: FieldName, optionA: Option[A]): Validation[ValidationError, Option[B]] =
+      SmartConstructor.optional(nest(fieldName))(optionA)
 
     def optionalField(field: FieldName, a: A): Validation[ValidationError, Option[B]] =
       optionalFieldFromOption(field, Option(a))
 
-    def nonEmptyChunkField(fieldName: FieldName, as: Iterable[A]): Validation[ValidationError, NonEmptyChunk[B]] =
+    def chunkField(fieldName: FieldName, as: Iterable[A]): Validation[ValidationError, zio.Chunk[B]] =
       val notNullAs = Option(as).fold(Iterable.empty[A])(identity)
-      val maybeNEC =
-        NonEmptyChunk.fromIterableOption(notNullAs).toRight(missingField(fieldName))
-      Validation
-        .fromEither(maybeNEC)
-        .flatMap(nec =>
-          Validation.validateAll(nec.zipWithIndex.map { (a, index) =>
-            self.changeError(causeOf.andThen(indexFieldError(fieldName, index)))(a)
-          })
-        )
+      val chunkAs   = zio.Chunk.fromIterable(notNullAs)
+      val validations = chunkAs.zipWithIndex.map { (a, index) =>
+        SmartConstructor.changeError(self)(causeOf.andThen(indexFieldError(fieldName, index)))(a)
+      }
+      Validation.validateAll(validations)
+    def nonEmptyChunkField(fieldName: FieldName, as: Iterable[A]): Validation[ValidationError, NonEmptyChunk[B]] =
+      chunkField(fieldName, as).flatMap(validAs =>
+        val maybeNec = NonEmptyChunk.fromChunk(validAs).toRight(missingField(fieldName))
+        Validation.fromEither(maybeNec)
+      )
