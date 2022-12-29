@@ -17,19 +17,23 @@ import zio.{ IO, NonEmptyChunk, UIO, URLayer, ZIO }
  * The implementation of [PlaceOrder] Delegates validation to [Validate] which is implemented by [ValidatePlacedOrder]
  */
 private[service] case class PlaceOrderService(
-  validationService: ValidateOrder,
-  priceService: PriceOrder,
-  shippingCostCalculator: CalculateShippingCost
+  validateOrder: ValidateOrder,
+  priceOrder: PriceOrder,
+  calculateShippingCost: CalculateShippingCost
 ) extends PlaceOrderUseCase:
 
   override def apply(unvalidatedOrder: UnvalidatedOrder): IO[PlaceOrderError, List[PlaceOrderEvent]] =
     for
-      validatedOrder               <- validationService.validateOrder(unvalidatedOrder)
-      pricedOrder                  <- priceService.priceOrder(validatedOrder)
-      pricedOrderWithShippingMethod = shippingCostCalculator.addShippingInfoToOrder(pricedOrder)
+      validatedOrder               <- validateOrder(unvalidatedOrder)
+      pricedOrder                  <- priceOrder(validatedOrder)
+      pricedOrderWithShippingMethod = addShippingInfoToOrder(pricedOrder)
       shipping                      = PlaceOrderService.createShippingEvent(pricedOrder)
     yield List(shipping)
 
+  private def addShippingInfoToOrder(pricedOrder: PricedOrder): PricedOrderWithShippingMethod =
+    val shippingCost = calculateShippingCost(pricedOrder)
+    val shippingInfo = ShippingInfo(ShippingMethod.Fedex48, shippingCost)
+    PricedOrderWithShippingMethod(shippingInfo, pricedOrder)
 object PlaceOrderService:
 
   //
@@ -49,9 +53,6 @@ object PlaceOrderService:
     lines: NonEmptyChunk[ValidatedOrderLine],
     pricingMethod: PricingMethod
   )
-
-  private[service] trait ValidateOrder:
-    def validateOrder(unvalidatedOrder: UnvalidatedOrder): IO[PlaceOrderError.ValidationFailure, ValidatedOrder]
 
   //
   // Pricing types and services
@@ -92,8 +93,6 @@ object PlaceOrderService:
     lines: NonEmptyChunk[PricedOrderLine],
     pricingMethod: PricingMethod
   )
-  private[service] trait PriceOrder:
-    def priceOrder(validatedOrder: ValidatedOrder): IO[PricingError, PricedOrder]
 
   //
   // Shipping types and services
@@ -103,13 +102,7 @@ object PlaceOrderService:
 
   private[service] final case class ShippingInfo(shippingMethod: ShippingMethod, shippingCost: Price)
   private[service] final case class PricedOrderWithShippingMethod(shippingInfo: ShippingInfo, pricedOrder: PricedOrder)
-  private[service] trait CalculateShippingCost:
-    def calculate(pricedOrder: PricedOrder): Price
 
-    def addShippingInfoToOrder(pricedOrder: PricedOrder): PricedOrderWithShippingMethod =
-      val shippingCost = calculate(pricedOrder)
-      val shippingInfo = ShippingInfo(ShippingMethod.Fedex48, shippingCost)
-      PricedOrderWithShippingMethod(shippingInfo, pricedOrder)
 
   //
   // Event creators
@@ -127,12 +120,12 @@ object PlaceOrderService:
   ] =
     zio.ZLayer {
       for
-        checkAddressExists     <- ZIO.service[CheckAddressExists]
-        checkProductCodeExists <- ZIO.service[CheckProductCodeExists]
-        standardPrices         <- ZIO.service[GetStandardProductPrice]
-        promoPrices            <- ZIO.service[GetPromotionProductPrice]
-        validationService       = PlaceOrderValidationService(checkAddressExists, checkProductCodeExists)
-        priceService            = PricingService(standardPrices, promoPrices)
-        shippingCostCalculator  = ShippingCostCalculator()
-      yield PlaceOrderService(validationService, priceService, shippingCostCalculator)
+        checkAddressExists       <- ZIO.service[CheckAddressExists]
+        checkProductCodeExists   <- ZIO.service[CheckProductCodeExists]
+        getStandardProductPrice  <- ZIO.service[GetStandardProductPrice]
+        getPromotionProductPrice <- ZIO.service[GetPromotionProductPrice]
+        validateOrder             = ValidateOrder(checkAddressExists, checkProductCodeExists)
+        priceOrder                = PriceOrder(getStandardProductPrice, getPromotionProductPrice)
+        shippingCostCalculator    = CalculateShippingCost()
+      yield PlaceOrderService(validateOrder, priceOrder, shippingCostCalculator)
     }

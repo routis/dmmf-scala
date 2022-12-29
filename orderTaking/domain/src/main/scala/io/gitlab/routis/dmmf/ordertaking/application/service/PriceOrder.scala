@@ -4,9 +4,8 @@ import io.gitlab.routis.dmmf.ordertaking.domain.{ BillingAmount, OrderQuantity, 
 import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase.PlaceOrderError
 import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase.PlaceOrderError.PricingError
 import io.gitlab.routis.dmmf.ordertaking.application.port.out.{ GetPromotionProductPrice, GetStandardProductPrice }
-import io.gitlab.routis.dmmf.ordertaking.application.service.PricingService.addCommentLine
+import io.gitlab.routis.dmmf.ordertaking.application.service.PriceOrder.addCommentLine
 import io.gitlab.routis.dmmf.ordertaking.application.service.PlaceOrderService.{
-  PriceOrder,
   PricedOrder,
   PricedOrderLine,
   PricingMethod,
@@ -16,13 +15,13 @@ import io.gitlab.routis.dmmf.ordertaking.application.service.PlaceOrderService.{
 import zio.prelude.Validation
 import zio.{ IO, NonEmptyChunk, UIO, ZIO }
 
-private[service] case class PricingService(
+private[service] case class PriceOrder(
   getStandardProductPrice: GetStandardProductPrice,
   getPromotionProductPrice: GetPromotionProductPrice
-) extends PriceOrder:
+) extends (ValidatedOrder => IO[PricingError, PricedOrder]):
 
-  import PricingService.toIO
-  override def priceOrder(validatedOrder: ValidatedOrder): IO[PricingError, PricedOrder] =
+  import PriceOrder.toIO
+  override def apply(validatedOrder: ValidatedOrder): IO[PricingError, PricedOrder] =
     val pricingMethod = validatedOrder.pricingMethod
     val toPriced      = toPricedOrderLine(pricingMethod)
     for
@@ -56,7 +55,7 @@ private[service] case class PricingService(
         getPromotionProductPrice(promotionCode, productCode)
           .someOrElseZIO(getStandardProductPrice(productCode))
 
-private[service] object PricingService:
+private[service] object PriceOrder:
 
   def addCommentLine(pricingMethod: PricingMethod)(
     lines: NonEmptyChunk[PricedOrderLine]
