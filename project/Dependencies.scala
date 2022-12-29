@@ -3,11 +3,12 @@ import sbt._
 object Dependencies {
 
   private lazy val zio = Seq(
-    "dev.zio" %% "zio"          % versions.zio,
-    "dev.zio" %% "zio-streams"  % versions.zio,
-    "dev.zio" %% "zio-test"     % versions.zio % "test",
-    "dev.zio" %% "zio-test-sbt" % versions.zio % "test",
-    "dev.zio" %% "zio-prelude"  % versions.prelude
+    "dev.zio" %% "zio"               % versions.zio,
+    "dev.zio" %% "zio-streams"       % versions.zio,
+    "dev.zio" %% "zio-test"          % versions.zio % "test",
+    "dev.zio" %% "zio-test-sbt"      % versions.zio % "test",
+    "dev.zio" %% "zio-test-magnolia" % versions.zio % "test",
+    "dev.zio" %% "zio-prelude"       % versions.prelude
   )
 
   private lazy val jodaMoney = Seq("org.joda" % "joda-money" % versions.jodaMoney)
@@ -25,7 +26,7 @@ object Dependencies {
 
   object versions {
 
-    val zio = "2.0.3"
+    val zio = "2.0.5"
     // val zio_quill    = "3.12.0.Beta1.7"
     val mariadb   = "2.7.4"
     val prelude   = "1.0.0-RC16"
