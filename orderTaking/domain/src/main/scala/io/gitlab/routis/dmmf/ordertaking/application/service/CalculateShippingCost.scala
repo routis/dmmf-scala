@@ -4,7 +4,7 @@ import io.gitlab.routis.dmmf.ordertaking.domain.{ Address, Price }
 
 import scala.annotation.unused
 
-private[service] case class CalculateShippingCost() extends (PlaceOrderService.PricedOrder => Price):
+private[service] case class CalculateShippingCost() extends PlaceOrderService.CalculateShippingCost:
 
   override def apply(pricedOrder: PlaceOrderService.PricedOrder): Price =
     import CalculateShippingCost.{ area, Area }

@@ -28,7 +28,7 @@ import scala.util.Either
 private[service] case class ValidateOrder(
   checkAddressExists: CheckAddressExists,
   checkProductCodeExists: CheckProductCodeExists
-) extends (UnvalidatedOrder => IO[PlaceOrderError.ValidationFailure, ValidatedOrder]):
+) extends PlaceOrderService.ValidateOrder:
 
   import ValidateOrder.DomainValidation
 

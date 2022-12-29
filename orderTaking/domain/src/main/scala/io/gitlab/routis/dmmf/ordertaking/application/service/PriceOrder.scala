@@ -18,7 +18,7 @@ import zio.{ IO, NonEmptyChunk, UIO, ZIO }
 private[service] case class PriceOrder(
   getStandardProductPrice: GetStandardProductPrice,
   getPromotionProductPrice: GetPromotionProductPrice
-) extends (ValidatedOrder => IO[PricingError, PricedOrder]):
+) extends PlaceOrderService.PriceOrder:
 
   import PriceOrder.toIO
   override def apply(validatedOrder: ValidatedOrder): IO[PricingError, PricedOrder] =

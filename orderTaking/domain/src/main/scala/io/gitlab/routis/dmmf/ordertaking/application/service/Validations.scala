@@ -3,7 +3,7 @@ package io.gitlab.routis.dmmf.ordertaking.application.service
 import zio.prelude.Validation
 import zio.{ IO, NonEmptyChunk, UIO, ZIO }
 
-private[service] object Validations:
+object Validations:
 
   extension [E, A](self: IO[NonEmptyChunk[E], A])
     def uioValidation: UIO[Validation[E, A]] = self.either.map(Validation.fromEitherNonEmptyChunk)

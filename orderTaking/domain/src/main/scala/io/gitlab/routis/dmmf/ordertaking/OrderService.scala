@@ -1,24 +1,33 @@
 package io.gitlab.routis.dmmf.ordertaking
 
-import zio.IO
+import zio.{ IO, ULayer, ZLayer }
 import zio.prelude.Validation
 
-trait Application:
+trait OrderService:
 
-  import Application.Dto.{ OrderDto, PlaceOrderErrorDto }
+  import OrderService.Dto.{ OrderDto, PlaceOrderErrorDto }
   def placeOrder(order: OrderDto): IO[PlaceOrderErrorDto, Unit]
 
-object Application:
+object OrderService:
 
-  import Application.Dto.PlaceOrderErrorDto
+  import OrderService.Dto.PlaceOrderErrorDto
   import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase
-  import zio.ZIO
-  private case class ApplicationLive(private val placeOrder: PlaceOrderUseCase) extends Application:
+  import zio.{ URLayer, ZIO, ZLayer }
+  private case class OrderServiceLive(private val placeOrder: PlaceOrderUseCase) extends OrderService:
     override def placeOrder(order: Dto.OrderDto): IO[Dto.PlaceOrderErrorDto, Unit] =
       (for
         unvalidatedOrder <- ZIO.succeed(order.toUnvalidated)
-        events           <- placeOrder(unvalidatedOrder).mapError(PlaceOrderErrorDto.fromDomain)
+        events           <- placeOrder.execute(unvalidatedOrder).mapError(PlaceOrderErrorDto.fromDomain)
+        _ <- ZIO.log(s"Events : $events")
       yield events).unit
+
+  lazy val live: URLayer[PlaceOrderUseCase, OrderService] =
+    ZLayer {
+      for placeOrderUseCase <- ZIO.service[PlaceOrderUseCase]
+      yield OrderServiceLive(placeOrderUseCase)
+    }
+  def placeOrder(order: Dto.OrderDto): ZIO[OrderService, Dto.PlaceOrderErrorDto, Unit] =
+    ZIO.serviceWithZIO[OrderService](_.placeOrder(order))
 
   object Dto:
 

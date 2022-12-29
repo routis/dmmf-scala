@@ -11,7 +11,7 @@ import io.gitlab.routis.dmmf.ordertaking.application.port.out.{
 }
 import io.gitlab.routis.dmmf.ordertaking.application.service.PlaceOrderService.*
 import io.gitlab.routis.dmmf.ordertaking.domain.*
-import zio.{ IO, NonEmptyChunk, UIO, URLayer, ZIO }
+import zio.{ Chunk, IO, NonEmptyChunk, UIO, URLayer, ZIO }
 
 /**
  * The implementation of [PlaceOrder] Delegates validation to [Validate] which is implemented by [ValidatePlacedOrder]
@@ -22,7 +22,7 @@ private[service] case class PlaceOrderService(
   calculateShippingCost: CalculateShippingCost
 ) extends PlaceOrderUseCase:
 
-  override def apply(unvalidatedOrder: UnvalidatedOrder): IO[PlaceOrderError, List[PlaceOrderEvent]] =
+  override def execute(unvalidatedOrder: UnvalidatedOrder): IO[PlaceOrderError, List[PlaceOrderEvent]] =
     for
       validatedOrder               <- validateOrder(unvalidatedOrder)
       pricedOrder                  <- priceOrder(validatedOrder)
@@ -35,6 +35,10 @@ private[service] case class PlaceOrderService(
     val shippingInfo = ShippingInfo(ShippingMethod.Fedex48, shippingCost)
     PricedOrderWithShippingMethod(shippingInfo, pricedOrder)
 object PlaceOrderService:
+
+  private[service] type ValidateOrder         = UnvalidatedOrder => IO[PlaceOrderError.ValidationFailure, ValidatedOrder]
+  private[service] type PriceOrder            = ValidatedOrder => IO[PricingError, PricedOrder]
+  private[service] type CalculateShippingCost = PricedOrder => Price
 
   //
   // Validation types and services
@@ -70,8 +74,8 @@ object PlaceOrderService:
       productCode: ProductCode,
       quantity: OrderQuantity,
       linePrice: Price
-    )                             extends PricedOrderLine
-    case Comment(comment: String) extends PricedOrderLine
+    )
+    case Comment(comment: String)
   end PricedOrderLine
 
   enum PricingMethod:
@@ -103,13 +107,24 @@ object PlaceOrderService:
   private[service] final case class ShippingInfo(shippingMethod: ShippingMethod, shippingCost: Price)
   private[service] final case class PricedOrderWithShippingMethod(shippingInfo: ShippingInfo, pricedOrder: PricedOrder)
 
-
   //
   // Event creators
   //
   import PlaceOrderUseCase.PlaceOrderEvent.*
   private def createShippingEvent(placedOrder: PricedOrder): ShippableOrderSent =
-    ShippableOrderSent(placedOrder.orderId, placedOrder.shippingAddress, lines = ???)
+    ShippableOrderSent(
+      placedOrder.orderId,
+      placedOrder.shippingAddress,
+      NonEmptyChunk
+        .fromChunk(placedOrder.lines.toChunk.flatMap { line =>
+          line match
+            case PricedOrderLine.PricedOrderProductLine(_, productCode, quantity, _) =>
+              Chunk(ShippableOrderLine(productCode, quantity))
+            case _ => Chunk.empty
+
+        })
+        .get
+    )
 
   //
   // Dependency Injection

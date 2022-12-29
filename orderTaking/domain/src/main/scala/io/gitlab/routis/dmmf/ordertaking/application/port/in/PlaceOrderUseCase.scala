@@ -7,7 +7,8 @@ import PlaceOrderUseCase.{ PlaceOrderError, PlaceOrderEvent, UnvalidatedOrder }
 /**
  * A service for placing an order
  */
-trait PlaceOrderUseCase extends (UnvalidatedOrder => IO[PlaceOrderError, List[PlaceOrderEvent]])
+trait PlaceOrderUseCase:
+  def execute(unvalidatedOrder: UnvalidatedOrder): ZIO[Any, PlaceOrderError, List[PlaceOrderEvent]]
 
 object PlaceOrderUseCase:
 
@@ -62,3 +63,6 @@ object PlaceOrderUseCase:
   enum PlaceOrderError:
     case ValidationFailure(errors: NonEmptyChunk[ValidationError])
     case PricingError(cause: String)
+
+  def execute(unvalidatedOrder: UnvalidatedOrder): ZIO[PlaceOrderUseCase, PlaceOrderError, List[PlaceOrderEvent]] =
+    ZIO.serviceWithZIO[PlaceOrderUseCase](_.execute(unvalidatedOrder))
