@@ -115,7 +115,7 @@ object PlaceOrderService:
   // Event creators
   //
   import PlaceOrderUseCase.PlaceOrderEvent.*
-  def createShippingEvent(placedOrder: PricedOrder): ShippableOrderSent =
+  private def createShippingEvent(placedOrder: PricedOrder): ShippableOrderSent =
     ShippableOrderSent(placedOrder.orderId, placedOrder.shippingAddress, lines = ???)
 
   //

@@ -133,7 +133,7 @@ private[service] case class PlaceOrderValidationService(
 private[service] object PlaceOrderValidationService:
   type DomainValidation[A] = Validation[ValidationError, A]
 
-  def toValidatedOrder(
+  private def toValidatedOrder(
     orderId: Validation[ValidationError, OrderId],
     customerInfo: Validation[ValidationError, CustomerInfo],
     shippingAddress: Validation[ValidationError, Address],
@@ -146,7 +146,7 @@ private[service] object PlaceOrderValidationService:
         ValidatedOrder.apply
       )
 
-  def toValidatedOrderLine(
+  private def toValidatedOrderLine(
     unvalidated: UnvalidatedOrderLine,
     productCode: Validation[ValidationError, ProductCode]
   ): DomainValidation[ValidatedOrderLine] =
@@ -165,14 +165,14 @@ private[service] object PlaceOrderValidationService:
     Validation
       .validateWith(orderLineId, productCode, quantity)(ValidatedOrderLine.apply)
 
-  def toCustomerInfo(customerInfo: UnvalidatedCustomerInfo): DomainValidation[CustomerInfo] =
+  private def toCustomerInfo(customerInfo: UnvalidatedCustomerInfo): DomainValidation[CustomerInfo] =
     CustomerInfo.make(
       toPersonalName(customerInfo.firstName, customerInfo.lastName),
       makeEmailAddress.requiredField("emailAddress", customerInfo.emailAddress),
       makeVipStatus.requiredField("vipStatus", customerInfo.vipStatus)
     )
 
-  def toAddress(checkedAddress: CheckedAddress): DomainValidation[Address] =
+  private def toAddress(checkedAddress: CheckedAddress): DomainValidation[Address] =
     val addr = checkedAddress.unvalidatedAddress
     Address.make(
       makeString50.requiredField("addressLine1", addr.addressLine1),
@@ -184,7 +184,7 @@ private[service] object PlaceOrderValidationService:
       makeZipCode.requiredField("zipCode", addr.zipCode)
     )
 
-  def toPersonalName(firstName: String, lastName: String): DomainValidation[PersonalName] =
+  private def toPersonalName(firstName: String, lastName: String): DomainValidation[PersonalName] =
     PersonalName.make(
       makeString50.requiredField("firstName", firstName),
       makeString50.requiredField("lastName", lastName)

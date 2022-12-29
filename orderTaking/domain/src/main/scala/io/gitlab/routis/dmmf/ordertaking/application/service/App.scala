@@ -44,12 +44,12 @@ object App extends zio.ZIOAppDefault:
     )
   import zio.given
 
-  lazy val placeOrderValidationSrv: PlaceOrderValidationService =
+  private lazy val placeOrderValidationSrv: PlaceOrderValidationService =
     val checkAddressExists: CheckAddressExists    = u => ZIO.succeed(CheckedAddress(u)).delay(100.millisecond)
     val productCodeExists: CheckProductCodeExists = pc => ZIO.succeed(pc.value == "G123").delay(120.millisecond)
     PlaceOrderValidationService(checkAddressExists, productCodeExists)
 
-  lazy val priceOrderSrv: PlaceOrderService.PriceOrder =
+  private lazy val priceOrderSrv: PlaceOrderService.PriceOrder =
     PricingService(standardPrices, promoPrices)
 
   def placeOrder(unvalidatedOrder: UnvalidatedOrder): ZIO[Any, PlaceOrderErrorDto, PlaceOrderService.ValidatedOrder] =

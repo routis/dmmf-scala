@@ -2,6 +2,8 @@ package io.gitlab.routis.dmmf.ordertaking.application.service
 
 import io.gitlab.routis.dmmf.ordertaking.domain.{ Address, Price }
 
+import scala.annotation.unused
+
 private[service] case class ShippingCostCalculator() extends PlaceOrderService.CalculateShippingCost:
 
   override def calculate(pricedOrder: PlaceOrderService.PricedOrder): Price =
@@ -14,7 +16,7 @@ private[service] case class ShippingCostCalculator() extends PlaceOrderService.C
 
 private[service] object ShippingCostCalculator:
 
-  enum Area:
+  private enum Area:
     case Local, EU, International
 
-  def area(address: Address): Area = Area.EU
+  private def area(@unused address: Address): Area = Area.EU
