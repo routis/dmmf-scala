@@ -25,10 +25,10 @@ object Dependencies {
 
   object versions {
 
-    val zio = "2.0.2"
+    val zio = "2.0.3"
     // val zio_quill    = "3.12.0.Beta1.7"
     val mariadb   = "2.7.4"
-    val prelude   = "1.0.0-RC15"
+    val prelude   = "1.0.0-RC16"
     val jodaMoney = "1.0.2"
 
   }
