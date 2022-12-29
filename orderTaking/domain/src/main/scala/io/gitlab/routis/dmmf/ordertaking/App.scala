@@ -4,11 +4,21 @@ import io.gitlab.routis.dmmf.ordertaking.OrderService
 import io.gitlab.routis.dmmf.ordertaking.OrderService.Dto
 import io.gitlab.routis.dmmf.ordertaking.OrderService.Dto.PlaceOrderErrorDto
 import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase
-import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase.{UnvalidatedAddress, UnvalidatedCustomerInfo, UnvalidatedOrder, UnvalidatedOrderLine}
+import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase.{
+  UnvalidatedAddress,
+  UnvalidatedCustomerInfo,
+  UnvalidatedOrder,
+  UnvalidatedOrderLine
+}
 import io.gitlab.routis.dmmf.ordertaking.application.port.out.CheckAddressExists.CheckedAddress
-import io.gitlab.routis.dmmf.ordertaking.application.port.out.{CheckAddressExists, CheckProductCodeExists, GetPromotionProductPrice, GetStandardProductPrice}
+import io.gitlab.routis.dmmf.ordertaking.application.port.out.{
+  CheckAddressExists,
+  CheckProductCodeExists,
+  GetPromotionProductPrice,
+  GetStandardProductPrice
+}
 import io.gitlab.routis.dmmf.ordertaking.application.service.PlaceOrderService
-import io.gitlab.routis.dmmf.ordertaking.domain.{Price, ProductCode, PromotionCode}
+import io.gitlab.routis.dmmf.ordertaking.domain.{ Price, ProductCode, PromotionCode }
 import zio.*
 
 object App extends zio.ZIOAppDefault:
@@ -48,8 +58,7 @@ object App extends zio.ZIOAppDefault:
       lines = Array(line, line.copy(orderLineId = "old2", productCode = "G123")),
       promotionCode = null
     )
- // import zio.given
-
+ 
   // noinspection TypeAnnotation
   override def run =
     OrderService
@@ -57,6 +66,7 @@ object App extends zio.ZIOAppDefault:
       .either
       .debug("here")
       .provide(
+        // ZLayer.Debug.tree,
         checkProductCodeExistsLayer,
         checkAddressExistsLayer,
         standardPricesLayer,
