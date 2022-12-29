@@ -82,16 +82,14 @@ package object domain:
   import ValidationError.FieldName
 
   enum ValidationError:
-    self =>
-
-    case Cause(description: String)                                             extends ValidationError
-    case FieldError(field: FieldName, error: ValidationError)                   extends ValidationError
-    case IndexedFieldError(list: FieldName, index: Int, error: ValidationError) extends ValidationError
+    case Cause(description: String)
+    case FieldError(field: FieldName, error: ValidationError)
+    case IndexedFieldError(list: FieldName, index: Int, error: ValidationError)
 
   object ValidationError:
     type FieldName = String
 
-    val missing: ValidationError = Cause("Missing")
+    private val missing: ValidationError = Cause("Missing")
 
     private[domain] def causeOf(error: Any): ValidationError =
       error match
@@ -103,9 +101,7 @@ package object domain:
     def fieldError(field: FieldName, error: Any): ValidationError =
       FieldError(field, causeOf(error))
 
-    def nestToField(field: FieldName): ValidationError => ValidationError = error => FieldError(field, error)
-
-    def missingField(field: FieldName): ValidationError = nestToField(field)(missing)
+    def missingField(field: FieldName): ValidationError = FieldError(field, missing)
 
     def indexFieldError(listName: FieldName, index: Int): ValidationError => ValidationError =
       error => ValidationError.IndexedFieldError(listName, index, error)
