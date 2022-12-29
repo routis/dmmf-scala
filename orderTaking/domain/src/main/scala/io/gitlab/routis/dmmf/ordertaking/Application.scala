@@ -17,7 +17,7 @@ object Application:
     override def placeOrder(order: Dto.OrderDto): IO[Dto.PlaceOrderErrorDto, Unit] =
       (for
         unvalidatedOrder <- ZIO.succeed(order.toUnvalidated)
-        events           <- placeOrder.placeOrder(unvalidatedOrder).mapError(PlaceOrderErrorDto.fromDomain)
+        events           <- placeOrder(unvalidatedOrder).mapError(PlaceOrderErrorDto.fromDomain)
       yield events).unit
 
   object Dto:

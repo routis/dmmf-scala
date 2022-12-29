@@ -2,12 +2,12 @@ package io.gitlab.routis.dmmf.ordertaking.application.port.in
 
 import zio.{ IO, NonEmptyChunk, ZIO }
 
+import PlaceOrderUseCase.{ PlaceOrderError, PlaceOrderEvent, UnvalidatedOrder }
+
 /**
  * A service for placing an order
  */
-trait PlaceOrderUseCase:
-  import PlaceOrderUseCase.{ PlaceOrderError, PlaceOrderEvent, UnvalidatedOrder }
-  def placeOrder(unvalidatedOrder: UnvalidatedOrder): IO[PlaceOrderError, List[PlaceOrderEvent]]
+trait PlaceOrderUseCase extends (UnvalidatedOrder => IO[PlaceOrderError, List[PlaceOrderEvent]])
 
 object PlaceOrderUseCase:
 

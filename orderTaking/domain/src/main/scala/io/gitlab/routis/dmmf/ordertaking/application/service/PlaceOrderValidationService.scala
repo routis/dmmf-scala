@@ -43,7 +43,7 @@ private[service] case class PlaceOrderValidationService(
     ZIO.logSpan("validateAddress") {
       (for
         present        <- ensurePresent(field, address).toIO
-        checkedAddress <- checkAddressExists.check(present).mapError(e => NonEmptyChunk.single(toValidationErrors(e)))
+        checkedAddress <- checkAddressExists(present).mapError(e => NonEmptyChunk.single(toValidationErrors(e)))
         validAddress   <- toAddress.nest(field)(checkedAddress).toIO
         _              <- ZIO.log("Valid")
       yield validAddress).uioValidation
@@ -53,7 +53,7 @@ private[service] case class PlaceOrderValidationService(
 
     def exists(productCode: ProductCode): IO[NonEmptyChunk[ValidationError], ProductCode] =
       ZIO
-        .ifZIO(checkProductCodeExists.check(productCode))(
+        .ifZIO(checkProductCodeExists(productCode))(
           onTrue = ZIO.succeed(productCode),
           onFalse = ZIO.fail(
             NonEmptyChunk

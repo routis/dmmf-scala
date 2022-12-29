@@ -17,8 +17,8 @@ import zio.prelude.Validation
 import zio.{ IO, NonEmptyChunk, UIO, ZIO }
 
 private[service] case class PricingService(
-  standardPrices: GetStandardProductPrice,
-  promoPrices: GetPromotionProductPrice
+  getStandardProductPrice: GetStandardProductPrice,
+  getPromotionProductPrice: GetPromotionProductPrice
 ) extends PriceOrder:
 
   import PricingService.toIO
@@ -49,12 +49,12 @@ private[service] case class PricingService(
     yield PricedOrderLine.PricedOrderProductLine(line.orderLineId, line.productCode, line.quantity, linePrice)
 
   private def getProductPrice(productCode: ProductCode, pricingMethod: PricingMethod): UIO[Price] =
+    import PricingMethod.{ Standard, Promotion }
     pricingMethod match
-      case PricingMethod.Standard() => standardPrices.getStandardProductPrice(productCode)
-      case PricingMethod.Promotion(promotionCode) =>
-        promoPrices
-          .getPromotionProductPrice(promotionCode, productCode)
-          .someOrElseZIO(standardPrices.getStandardProductPrice(productCode))
+      case Standard() => getStandardProductPrice(productCode)
+      case Promotion(promotionCode) =>
+        getPromotionProductPrice(promotionCode, productCode)
+          .someOrElseZIO(getStandardProductPrice(productCode))
 
 private[service] object PricingService:
 

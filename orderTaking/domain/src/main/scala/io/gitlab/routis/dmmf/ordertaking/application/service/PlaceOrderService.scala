@@ -22,7 +22,7 @@ private[service] case class PlaceOrderService(
   shippingCostCalculator: CalculateShippingCost
 ) extends PlaceOrderUseCase:
 
-  override def placeOrder(unvalidatedOrder: UnvalidatedOrder): IO[PlaceOrderError, List[PlaceOrderEvent]] =
+  override def apply(unvalidatedOrder: UnvalidatedOrder): IO[PlaceOrderError, List[PlaceOrderEvent]] =
     for
       validatedOrder               <- validationService.validateOrder(unvalidatedOrder)
       pricedOrder                  <- priceService.priceOrder(validatedOrder)
