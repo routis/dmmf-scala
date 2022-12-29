@@ -15,9 +15,9 @@ object Iso3166:
       hasLength(equalTo(3)) && equalToOneOf(getISOCountries(Locale.IsoCountryCode.PART1_ALPHA3))
 
   private def equalToOneOf[A](as: Iterable[A]): Assertion[A] =
-    given orIsIdentity[A]: Identity[Assertion[A]] with
-      override def identity: Assertion[A]                          = Assertion.never
-      override def combine(l: => Assertion[A], r: => Assertion[A]) = l || r
+    given orOfAssertionIsIdentity[A1]: Identity[Assertion[A1]] with
+      override def identity: Assertion[A1]                                          = Assertion.never
+      override def combine(l: => Assertion[A1], r: => Assertion[A1]): Assertion[A1] = l || r
     as.foldMap(equalTo)
 
   private def getISOCountries(isoType: Locale.IsoCountryCode): Iterable[String] =
