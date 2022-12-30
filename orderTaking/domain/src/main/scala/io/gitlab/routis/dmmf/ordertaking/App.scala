@@ -1,8 +1,8 @@
 package io.gitlab.routis.dmmf.ordertaking
 
-import io.gitlab.routis.dmmf.ordertaking.OrderService
-import io.gitlab.routis.dmmf.ordertaking.OrderService.Dto
-import io.gitlab.routis.dmmf.ordertaking.OrderService.Dto.PlaceOrderErrorDto
+import io.gitlab.routis.dmmf.ordertaking.OrderTakingService
+import io.gitlab.routis.dmmf.ordertaking.OrderTakingService.Dto
+import io.gitlab.routis.dmmf.ordertaking.OrderTakingService.Dto.PlaceOrderErrorDto
 import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase
 import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase.{
   UnvalidatedAddress,
@@ -61,7 +61,7 @@ object App extends zio.ZIOAppDefault:
  
   // noinspection TypeAnnotation
   override def run =
-    OrderService
+    OrderTakingService
       .placeOrder(order)
       .either
       .debug("here")
@@ -72,5 +72,5 @@ object App extends zio.ZIOAppDefault:
         standardPricesLayer,
         promoPricesLayer,
         PlaceOrderService.layer,
-        OrderService.live
+        OrderTakingService.live
       )

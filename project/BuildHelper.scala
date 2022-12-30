@@ -19,5 +19,9 @@ object BuildHelper {
   )
 
   def stdSettings(prjName: String) =
-    Seq(name := s"$prjName", ThisBuild / scalaVersion := scala3, scalacOptions := scala3Options)
+    Seq(
+      name := s"$prjName", 
+      ThisBuild / scalaVersion := scala3, 
+      scalacOptions := scala3Options
+    )
 }
