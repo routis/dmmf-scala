@@ -134,11 +134,11 @@ private[service] object ValidateOrder:
   type DomainValidation[A] = Validation[ValidationError, A]
 
   private def toValidatedOrder(
-    orderId: Validation[ValidationError, OrderId],
-    customerInfo: Validation[ValidationError, CustomerInfo],
-    shippingAddress: Validation[ValidationError, Address],
-    billingAddress: Validation[ValidationError, Address],
-    lines: Validation[ValidationError, NonEmptyChunk[ValidatedOrderLine]],
+    orderId: DomainValidation[OrderId],
+    customerInfo: DomainValidation[CustomerInfo],
+    shippingAddress: DomainValidation[Address],
+    billingAddress: DomainValidation[Address],
+    lines: DomainValidation[NonEmptyChunk[ValidatedOrderLine]],
     pricingMethod: PricingMethod
   ): DomainValidation[ValidatedOrder] =
     Validation
@@ -148,7 +148,7 @@ private[service] object ValidateOrder:
 
   private def toValidatedOrderLine(
     unvalidated: UnvalidatedOrderLine,
-    productCode: Validation[ValidationError, ProductCode]
+    productCode: DomainValidation[ProductCode]
   ): DomainValidation[ValidatedOrderLine] =
     val orderLineId =
       makeOrderLineId.requiredField("orderLineId", unvalidated.orderLineId)
@@ -189,3 +189,5 @@ private[service] object ValidateOrder:
       makeString50.requiredField("firstName", firstName),
       makeString50.requiredField("lastName", lastName)
     )
+
+end ValidateOrder
