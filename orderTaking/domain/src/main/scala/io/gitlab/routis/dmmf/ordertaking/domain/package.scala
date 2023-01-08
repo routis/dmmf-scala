@@ -25,9 +25,9 @@ package object domain:
   //
   object OrderId     extends Newtype[String]
   object OrderLineId extends Newtype[String]
-  object ZipCode extends Subtype[String]:
+  object ZipCode extends Newtype[String]:
     override inline def assertion: Assertion[String] = matches("^\\d{5}$".r)
-  object EmailAddress extends Subtype[String]:
+  object EmailAddress extends Newtype[String]:
     override inline def assertion: Assertion[String] = matches("^(.+)@(.+)$".r)
   object String50 extends Subtype[String]:
     override inline def assertion: Assertion[String] = hasLength(between(1, 50))
