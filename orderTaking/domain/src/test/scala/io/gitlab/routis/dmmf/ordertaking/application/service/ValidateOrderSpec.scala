@@ -1,8 +1,8 @@
 package io.gitlab.routis.dmmf.ordertaking.application.service
 
 import io.gitlab.routis.dmmf.ordertaking.Generators
-import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase
-import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase.UnvalidatedOrder
+import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrder
+import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrder.UnvalidatedOrder
 import io.gitlab.routis.dmmf.ordertaking.application.port.out.CheckAddressExists.CheckedAddress
 import io.gitlab.routis.dmmf.ordertaking.application.port.out.{ CheckAddressExists, CheckProductCodeExists }
 import io.gitlab.routis.dmmf.ordertaking.application.service.PlaceOrderService.ValidatedOrder
@@ -20,7 +20,7 @@ object ValidateOrderSpec extends ZIOSpecDefault:
 
   private def validateOrder(
     unvalidatedOrder: UnvalidatedOrder
-  ): ZIO[PlaceOrderService.ValidateOrder, PlaceOrderUseCase.PlaceOrderError.ValidationFailure, ValidatedOrder] =
+  ): ZIO[PlaceOrderService.ValidateOrder, PlaceOrder.PlaceOrderError.ValidationFailure, ValidatedOrder] =
     ZIO.serviceWithZIO[PlaceOrderService.ValidateOrder](_.apply(unvalidatedOrder))
   override def spec = suite("ValidateOrder")( //
     test("with valid input") {

@@ -1,6 +1,6 @@
 package io.gitlab.routis.dmmf.ordertaking.application.service
 
-import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase.*
+import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrder.*
 import io.gitlab.routis.dmmf.ordertaking.application.port.out.CheckAddressExists.{
   AddressValidationError,
   CheckedAddress

@@ -1,8 +1,8 @@
 package io.gitlab.routis.dmmf.ordertaking.application.service
 
 import io.gitlab.routis.dmmf.ordertaking.domain.{ BillingAmount, OrderQuantity, Price, ProductCode }
-import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase.PlaceOrderError
-import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase.PlaceOrderError.PricingError
+import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrder.PlaceOrderError
+import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrder.PlaceOrderError.PricingError
 import io.gitlab.routis.dmmf.ordertaking.application.port.out.{ GetPromotionProductPrice, GetStandardProductPrice }
 import io.gitlab.routis.dmmf.ordertaking.application.service.PriceOrder.addCommentLine
 import io.gitlab.routis.dmmf.ordertaking.application.service.PlaceOrderService.{

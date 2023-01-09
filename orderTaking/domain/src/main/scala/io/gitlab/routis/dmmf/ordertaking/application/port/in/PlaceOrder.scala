@@ -2,15 +2,15 @@ package io.gitlab.routis.dmmf.ordertaking.application.port.in
 
 import zio.{ IO, NonEmptyChunk, ZIO }
 
-import PlaceOrderUseCase.{ PlaceOrderError, PlaceOrderEvent, UnvalidatedOrder }
+import PlaceOrder.{ PlaceOrderError, PlaceOrderEvent, UnvalidatedOrder }
 
 /**
  * A service for placing an order
  */
-trait PlaceOrderUseCase:
+trait PlaceOrder:
   def execute(unvalidatedOrder: UnvalidatedOrder): ZIO[Any, PlaceOrderError, List[PlaceOrderEvent]]
 
-object PlaceOrderUseCase:
+object PlaceOrder:
 
   // Types representing input of the place order (unvalidated order)
 
@@ -64,5 +64,5 @@ object PlaceOrderUseCase:
     case ValidationFailure(errors: NonEmptyChunk[ValidationError])
     case PricingError(cause: String)
 
-  def execute(unvalidatedOrder: UnvalidatedOrder): ZIO[PlaceOrderUseCase, PlaceOrderError, List[PlaceOrderEvent]] =
-    ZIO.serviceWithZIO[PlaceOrderUseCase](_.execute(unvalidatedOrder))
+  def execute(unvalidatedOrder: UnvalidatedOrder): ZIO[PlaceOrder, PlaceOrderError, List[PlaceOrderEvent]] =
+    ZIO.serviceWithZIO[PlaceOrder](_.execute(unvalidatedOrder))

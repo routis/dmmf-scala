@@ -11,9 +11,9 @@ trait OrderTakingService:
 object OrderTakingService:
 
   import OrderTakingService.Dto.PlaceOrderErrorDto
-  import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase
+  import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrder
   import zio.{ URLayer, ZIO, ZLayer }
-  private case class OrderTakingServiceLive(private val placeOrder: PlaceOrderUseCase) extends OrderTakingService:
+  private case class OrderTakingServiceLive(private val placeOrder: PlaceOrder) extends OrderTakingService:
     override def placeOrder(order: Dto.OrderDto): IO[Dto.PlaceOrderErrorDto, Unit] =
       (for
         unvalidatedOrder <- ZIO.succeed(order.toUnvalidated)
@@ -21,9 +21,9 @@ object OrderTakingService:
         _ <- ZIO.log(s"Events : $events")
       yield events).unit
 
-  lazy val live: URLayer[PlaceOrderUseCase, OrderTakingService] =
+  lazy val live: URLayer[PlaceOrder, OrderTakingService] =
     ZLayer {
-      for placeOrderUseCase <- ZIO.service[PlaceOrderUseCase]
+      for placeOrderUseCase <- ZIO.service[PlaceOrder]
       yield OrderTakingServiceLive(placeOrderUseCase)
     }
   def placeOrder(order: Dto.OrderDto): ZIO[OrderTakingService, Dto.PlaceOrderErrorDto, Unit] =
@@ -32,7 +32,7 @@ object OrderTakingService:
   object Dto:
 
     import io.gitlab.routis.dmmf.ordertaking.domain.*
-    import PlaceOrderUseCase.*
+    import PlaceOrder.*
     import ValidationError.{ Cause, FieldError, IndexedFieldError }
     import PlaceOrderError.{ PricingError, ValidationFailure }
 

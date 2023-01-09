@@ -3,8 +3,8 @@ package io.gitlab.routis.dmmf.ordertaking
 import io.gitlab.routis.dmmf.ordertaking.OrderTakingService
 import io.gitlab.routis.dmmf.ordertaking.OrderTakingService.Dto
 import io.gitlab.routis.dmmf.ordertaking.OrderTakingService.Dto.PlaceOrderErrorDto
-import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase
-import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase.{
+import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrder
+import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrder.{
   UnvalidatedAddress,
   UnvalidatedCustomerInfo,
   UnvalidatedOrder,

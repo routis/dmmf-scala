@@ -1,7 +1,7 @@
 package io.gitlab.routis.dmmf.ordertaking
 
 import com.github.javafaker.Faker
-import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase.{
+import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrder.{
   UnvalidatedAddress,
   UnvalidatedCustomerInfo,
   UnvalidatedOrder,

@@ -1,8 +1,8 @@
 package io.gitlab.routis.dmmf.ordertaking.application.service
 
-import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase
-import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase.*
-import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase.PlaceOrderError.PricingError
+import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrder
+import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrder.*
+import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrder.PlaceOrderError.PricingError
 import io.gitlab.routis.dmmf.ordertaking.application.port.out.{
   CheckAddressExists,
   CheckProductCodeExists,
@@ -20,7 +20,7 @@ private[service] case class PlaceOrderService(
   validateOrder: ValidateOrder,
   priceOrder: PriceOrder,
   calculateShippingCost: CalculateShippingCost
-) extends PlaceOrderUseCase:
+) extends PlaceOrder:
 
   override def execute(unvalidatedOrder: UnvalidatedOrder): IO[PlaceOrderError, List[PlaceOrderEvent]] =
     for
@@ -110,7 +110,7 @@ object PlaceOrderService:
   //
   // Event creators
   //
-  import PlaceOrderUseCase.PlaceOrderEvent.*
+  import PlaceOrder.PlaceOrderEvent.*
   private def createShippingEvent(placedOrder: PricedOrder): ShippableOrderSent =
     ShippableOrderSent(
       placedOrder.orderId,
@@ -131,7 +131,7 @@ object PlaceOrderService:
   //
   val layer: URLayer[
     CheckAddressExists & CheckProductCodeExists & GetStandardProductPrice & GetPromotionProductPrice,
-    PlaceOrderUseCase
+    PlaceOrder
   ] =
     zio.ZLayer {
       for

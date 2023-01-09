@@ -1,6 +1,6 @@
 package io.gitlab.routis.dmmf.ordertaking.application.port.out
 
-import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrderUseCase.UnvalidatedAddress
+import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrder.UnvalidatedAddress
 import zio.IO
 import CheckAddressExists.*
 
