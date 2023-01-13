@@ -36,14 +36,14 @@ object Generators:
   lazy val unvalidatedAddressGen: Gen[Faker, UnvalidatedAddress] =
     for
       address <- FakerGen.fakeValueGen(_.address())
-      country <- FakerGen.fakeValueGen(_.country().countryCode2())
+      country <- FakerGen.fakeValueGen(_.country().countryCode2().toUpperCase)
     yield UnvalidatedAddress(
       addressLine1 = address.streetAddress().s50,
       addressLine2 = null,
       addressLine3 = null,
       addressLine4 = null,
       city = address.city().s50,
-      country = "GR",
+      country = country,
       zipCode = address.zipCode().take(5)
     )
 
