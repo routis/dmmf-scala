@@ -63,14 +63,14 @@ object Generators:
 
   lazy val unvalidatedOrderLineGen: Gen[Faker, UnvalidatedOrderLine] =
     for
-      orderLineId <- Gen.string
+      orderLineId <- Gen.asciiString
       productCode <- productCodeStrGen
       quantity    <- Gen.double(1, 100)
     yield UnvalidatedOrderLine(orderLineId = orderLineId, productCode = productCode, quantity = quantity)
 
   lazy val unvalidatedOrderGen: Gen[Faker, UnvalidatedOrder] =
     for
-      orderId         <- Gen.string
+      orderId         <- Gen.long.map(_.toString)
       customerInfo    <- unvalidatedCustomerInfoGen
       shippingAddress <- unvalidatedAddressGen
       lines           <- Gen.listOf1(unvalidatedOrderLineGen)
