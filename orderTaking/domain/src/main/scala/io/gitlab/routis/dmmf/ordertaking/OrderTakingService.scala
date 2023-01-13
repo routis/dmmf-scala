@@ -18,7 +18,7 @@ object OrderTakingService:
       (for
         unvalidatedOrder <- ZIO.succeed(order.toUnvalidated)
         events           <- placeOrder.execute(unvalidatedOrder).mapError(PlaceOrderErrorDto.fromDomain)
-        _ <- ZIO.log(s"Events : $events")
+        _                <- ZIO.log(s"Events : $events")
       yield events).unit
 
   lazy val live: URLayer[PlaceOrder, OrderTakingService] =
@@ -57,14 +57,14 @@ object OrderTakingService:
         def toDomain: Validation[ValidationError, CustomerInfo] =
           def makePersonalName =
             for
-              firstName <- makeString50.requiredField("firstName", dto.firstName)
-              lastName  <- makeString50.requiredField("lastName", dto.lastName)
+              firstName <- String50.make.requiredField("firstName", dto.firstName)
+              lastName  <- String50.make.requiredField("lastName", dto.lastName)
             yield PersonalName(firstName, lastName)
 
           for
             name         <- makePersonalName
-            emailAddress <- makeEmailAddress.requiredField("emailAddress", dto.emailAddress)
-            vipStatus    <- makeVipStatus.requiredField("vipStatus", dto.vipStatus)
+            emailAddress <- EmailAddress.make.requiredField("emailAddress", dto.emailAddress)
+            vipStatus    <- VipStatus.make.requiredField("vipStatus", dto.vipStatus)
           yield CustomerInfo(name, emailAddress, vipStatus)
     end CustomerInfoDto
 
@@ -102,13 +102,13 @@ object OrderTakingService:
           )
         def toDomain: Validation[ValidationError, Address] =
           for
-            addressLine1 <- makeString50.requiredField("addressLine1", dto.addressLine1)
-            addressLine2 <- makeString50.optionalField("addressLine2", dto.addressLine2)
-            addressLine3 <- makeString50.optionalField("addressLine3", dto.addressLine2)
-            addressLine4 <- makeString50.optionalField("addressLine4", dto.addressLine2)
-            city         <- makeString50.requiredField("city", dto.city)
-            country      <- makeCountry.requiredField("country", dto.country)
-            zipCode      <- makeZipCode.requiredField("zipCode", dto.addressLine1)
+            addressLine1 <- String50.make.requiredField("addressLine1", dto.addressLine1)
+            addressLine2 <- String50.make.optionalField("addressLine2", dto.addressLine2)
+            addressLine3 <- String50.make.optionalField("addressLine3", dto.addressLine2)
+            addressLine4 <- String50.make.optionalField("addressLine4", dto.addressLine2)
+            city         <- String50.make.requiredField("city", dto.city)
+            country      <- Iso3166.Part1Alpha2.make.requiredField("country", dto.country)
+            zipCode      <- ZipCode.make.requiredField("zipCode", dto.addressLine1)
           yield Address(
             addressLine1 = addressLine1,
             addressLine2 = addressLine2,

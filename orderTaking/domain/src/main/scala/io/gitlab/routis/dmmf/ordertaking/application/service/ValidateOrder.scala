@@ -14,12 +14,7 @@ import io.gitlab.routis.dmmf.ordertaking.application.service.PlaceOrderService.{
 import io.gitlab.routis.dmmf.ordertaking.application.service.ValidateOrder.*
 import io.gitlab.routis.dmmf.ordertaking.application.service.Validations.*
 import io.gitlab.routis.dmmf.ordertaking.domain.*
-import io.gitlab.routis.dmmf.ordertaking.domain.ValidationError.{
-  ensurePresent,
-  fieldError,
-  indexFieldError,
-  FieldName
-}
+import io.gitlab.routis.dmmf.ordertaking.domain.ValidationError.{ ensurePresent, fieldError, indexFieldError }
 import zio.prelude.*
 import zio.{ IO, NonEmptyChunk, UIO, URLayer, ZIO }
 
@@ -30,9 +25,7 @@ private[service] case class ValidateOrder(
   checkProductCodeExists: CheckProductCodeExists
 ) extends PlaceOrderService.ValidateOrder:
 
-  import ValidateOrder.DomainValidation
-
-  private def toCheckedAddress(field: FieldName, address: UnvalidatedAddress): UIO[DomainValidation[Address]] =
+  private def toCheckedAddress(field: String, address: UnvalidatedAddress): UIO[DomainValidation[Address]] =
 
     def toValidationErrors(e: AddressValidationError): ValidationError =
       val description = e match
@@ -49,7 +42,7 @@ private[service] case class ValidateOrder(
       yield validAddress).uioValidation
     }
 
-  private def toProductCode(field: FieldName, unvalidated: String): UIO[DomainValidation[ProductCode]] =
+  private def toProductCode(field: String, unvalidated: String): UIO[DomainValidation[ProductCode]] =
 
     def exists(productCode: ProductCode): IO[NonEmptyChunk[ValidationError], ProductCode] =
       ZIO
@@ -62,7 +55,7 @@ private[service] case class ValidateOrder(
         )
 
     (for
-      productCode     <- makeProductCode.requiredField(field, unvalidated).toIO
+      productCode     <- ProductCode.make.requiredField(field, unvalidated).toIO
       existingProduct <- exists(productCode)
     yield existingProduct).uioValidation
 
@@ -70,7 +63,7 @@ private[service] case class ValidateOrder(
     lines: List[UnvalidatedOrderLine]
   ): UIO[DomainValidation[NonEmptyChunk[ValidatedOrderLine]]] =
 
-    val field: FieldName = "lines"
+    val field: String = "lines"
 
     def validateOrderLine(
       unvalidatedOrderLine: UnvalidatedOrderLine,
@@ -102,7 +95,7 @@ private[service] case class ValidateOrder(
 
   def apply(unvalidated: UnvalidatedOrder): IO[PlaceOrderError.ValidationFailure, ValidatedOrder] =
 
-    val orderId      = makeOrderId.requiredField("orderId", unvalidated.orderId)
+    val orderId      = OrderId.make.requiredField("orderId", unvalidated.orderId)
     val customerInfo = toCustomerInfo.requiredField("customerInfo", unvalidated.customerInfo)
 
     ZIO.logSpan("validateOrder") {
@@ -131,7 +124,6 @@ private[service] case class ValidateOrder(
     }
 
 private[service] object ValidateOrder:
-  type DomainValidation[A] = Validation[ValidationError, A]
 
   private def toValidatedOrder(
     orderId: DomainValidation[OrderId],
@@ -151,7 +143,7 @@ private[service] object ValidateOrder:
     productCode: DomainValidation[ProductCode]
   ): DomainValidation[ValidatedOrderLine] =
     val orderLineId =
-      makeOrderLineId.requiredField("orderLineId", unvalidated.orderLineId)
+      OrderLineId.make.requiredField("orderLineId", unvalidated.orderLineId)
 
     // if maybeProductCode is left then whatever the quantity we return failed
     // otherwise we check the quantity
@@ -168,26 +160,26 @@ private[service] object ValidateOrder:
   private def toCustomerInfo(customerInfo: UnvalidatedCustomerInfo): DomainValidation[CustomerInfo] =
     CustomerInfo.make(
       toPersonalName(customerInfo.firstName, customerInfo.lastName),
-      makeEmailAddress.requiredField("emailAddress", customerInfo.emailAddress),
-      makeVipStatus.requiredField("vipStatus", customerInfo.vipStatus)
+      EmailAddress.make.requiredField("emailAddress", customerInfo.emailAddress),
+      VipStatus.make.requiredField("vipStatus", customerInfo.vipStatus)
     )
 
   private def toAddress(checkedAddress: CheckedAddress): DomainValidation[Address] =
     val addr = checkedAddress.unvalidatedAddress
     Address.make(
-      makeString50.requiredField("addressLine1", addr.addressLine1),
-      makeString50.optionalField("addressLine2", addr.addressLine2),
-      makeString50.optionalField("addressLine3", addr.addressLine3),
-      makeString50.optionalField("addressLine4", addr.addressLine4),
-      makeString50.requiredField("city", addr.city),
-      makeCountry.requiredField("country", addr.country),
-      makeZipCode.requiredField("zipCode", addr.zipCode)
+      String50.make.requiredField("addressLine1", addr.addressLine1),
+      String50.make.optionalField("addressLine2", addr.addressLine2),
+      String50.make.optionalField("addressLine3", addr.addressLine3),
+      String50.make.optionalField("addressLine4", addr.addressLine4),
+      String50.make.requiredField("city", addr.city),
+      Iso3166.Part1Alpha2.make.requiredField("country", addr.country),
+      ZipCode.make.requiredField("zipCode", addr.zipCode)
     )
 
   private def toPersonalName(firstName: String, lastName: String): DomainValidation[PersonalName] =
     PersonalName.make(
-      makeString50.requiredField("firstName", firstName),
-      makeString50.requiredField("lastName", lastName)
+      String50.make.requiredField("firstName", firstName),
+      String50.make.requiredField("lastName", lastName)
     )
 
 end ValidateOrder
