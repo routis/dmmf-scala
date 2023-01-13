@@ -2,15 +2,17 @@ package io.gitlab.routis.dmmf.ordertaking.domain
 
 import com.github.javafaker.Faker
 import io.gitlab.routis.dmmf.ordertaking.Generators
+import io.gitlab.routis.dmmf.ordertaking.domain.DomainSpec.test
 import zio.test.Assertion.{ equalTo, isLeft, isRight }
+import zio.test.TestServices.test
 import zio.test.{ assert, check, Gen, Spec }
 
 object DomainSpec extends zio.test.ZIOSpecDefault:
 
-  override def spec: Spec[Any, Nothing] =
+  def spec: Spec[Any, Nothing] =
     domainSpec.provideLayerShared(Generators.faker)
 
-  def domainSpec = zipCodeSpec + productCodeSpec
+  def domainSpec: Spec[Faker, Nothing] = zipCodeSpec + productCodeSpec
 
   val zipCodeSpec: Spec[Faker, Nothing] =
     suite("ZipCodeSpec")(
@@ -23,20 +25,15 @@ object DomainSpec extends zio.test.ZIOSpecDefault:
     )
 
   val productCodeSpec: Spec[Faker, Nothing] =
-    def makeWithValidCode(validCodes: Gen[Faker, String])(label: String) = test(label) {
-      check(validCodes) { str =>
-        val maybeProduct = ProductCode.make(str).map(_.value).toEither
-        assert(maybeProduct)(isRight(equalTo(str)))
-      }
-    }
-
-    suite("ProductCode")(
-      makeWithValidCode(Generators.gizmoCodeGen)("make with valid gizmo codes"),
-      makeWithValidCode(Generators.widgetCodeGen)("make with valid widget codes"),
+    suite("ProductCodeSpec")(
+      test("make with valid gizmo or widget codes") {
+        check(Generators.gizmoCodeGen ++ Generators.widgetCodeGen) { str =>
+          assert(ProductCode.make(str).map(_.value).toEither)(isRight(equalTo(str)))
+        }
+      },
       test("make() with invalid") {
         check(Gen.string) { str =>
-          val maybeProduct = ProductCode.make(str).map(_.value).toEither
-          assert(maybeProduct)(isLeft)
+          assert(ProductCode.make(str).toEither)(isLeft)
         }
       }
     )
