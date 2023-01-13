@@ -147,7 +147,7 @@ private[service] object ValidateOrder:
 
     // if maybeProductCode is left then whatever the quantity we return failed
     // otherwise we check the quantity
-    val quantityConstructor: SmartConstructor[Double, String, OrderQuantity] =
+    val quantityConstructor: Double => Validation[String, OrderQuantity] =
       productCode.fold(
         _ => _ => Validation.fail("Cannot be validated due to invalid product code"),
         pc => OrderQuantity.forProduct(pc)

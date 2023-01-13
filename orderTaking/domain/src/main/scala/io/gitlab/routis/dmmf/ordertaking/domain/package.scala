@@ -65,35 +65,34 @@ package object domain:
     def indexFieldError(listName: String, index: Int): ValidationError => ValidationError =
       error => ValidationError.IndexedFieldError(listName, index, error)
 
-    def ensurePresentOption[A](fieldName: String, optionA: Option[A]): Validation[ValidationError, A] =
+    def ensurePresentOption[A](fieldName: String, optionA: Option[A]): DomainValidation[A] =
       Validation.fromEither(optionA.toRight(missingField(fieldName)))
 
-    def ensurePresent[A](fieldName: String, a: A): Validation[ValidationError, A] =
+    def ensurePresent[A](fieldName: String, a: A): DomainValidation[A] =
       ensurePresentOption(fieldName, Option(a))
 
   end ValidationError
 
-  type SmartConstructor[A, E, B] = A => Validation[E, B]
-  extension [A, E, B](self: SmartConstructor[A, E, B])
+  extension [A, E, B](smartConstructor: A => Validation[E, B])
 
     def nest(fieldName: String): A => DomainValidation[B] =
-      self.andThen(_.mapError(fieldError(fieldName)))
+      smartConstructor.andThen(_.mapError(fieldError(fieldName)))
 
     def requiredField(fieldName: String, a: A): DomainValidation[B] =
       Option(a) match
-        case Some(a) => self(a).mapError(fieldError(fieldName))
+        case Some(a) => smartConstructor(a).mapError(fieldError(fieldName))
         case None    => Validation.fail(missingField(fieldName))
 
     def optionalField(fieldName: String, a: A): DomainValidation[Option[B]] =
       Option(a) match
-        case Some(a) => self(a).mapError(fieldError(fieldName)).map(Some.apply)
+        case Some(a) => smartConstructor(a).mapError(fieldError(fieldName)).map(Some.apply)
         case None    => Validation.succeed(None)
 
     def chunkField(fieldName: String, as: Iterable[A]): DomainValidation[zio.Chunk[B]] =
       val notNullAs = Option(as).fold(Iterable.empty[A])(identity)
       val chunkAs   = zio.Chunk.fromIterable(notNullAs)
       val validations = chunkAs.zipWithIndex.map { (a, index) =>
-        self(a).mapError(causeOf.andThen(indexFieldError(fieldName, index)))
+        smartConstructor(a).mapError(causeOf.andThen(indexFieldError(fieldName, index)))
       }
       Validation.validateAll(validations)
     def nonEmptyChunkField(fieldName: String, as: Iterable[A]): DomainValidation[NonEmptyChunk[B]] =
