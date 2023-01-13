@@ -85,7 +85,7 @@ object OrderTakingService:
           addressLine3 = domain.addressLine3.orNull,
           addressLine4 = domain.addressLine4.orNull,
           city = domain.city,
-          country = domain.country,
+          country = Iso3166.Part1Alpha2.unwrap(domain.country),
           zipCode = ZipCode.unwrap(domain.zipCode)
         )
 
