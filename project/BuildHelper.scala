@@ -3,7 +3,7 @@ import sbt.{ ThisBuild, _ }
 
 object BuildHelper {
 
-  val scala3 = "3.2.1"
+  val scala3 = "3.3.0"
 
   private val scala3Options = Seq(
     "-encoding",
@@ -19,9 +19,5 @@ object BuildHelper {
   )
 
   def stdSettings(prjName: String) =
-    Seq(
-      name := s"$prjName", 
-      ThisBuild / scalaVersion := scala3, 
-      scalacOptions := scala3Options
-    )
+    Seq(name := s"$prjName", ThisBuild / scalaVersion := scala3, scalacOptions := scala3Options)
 }

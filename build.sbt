@@ -1,6 +1,6 @@
 import BuildHelper.stdSettings
 
-ThisBuild / scalaVersion := "3.2.1"
+ThisBuild / scalaVersion := "3.3.0"
 ThisBuild / organization := "io.gitlab.routis.dmmf"
 
 addCommandAlias("fmt", "all scalafmtSbt scalafmt test:scalafmt")
