@@ -27,7 +27,7 @@ object Dependencies {
 
   object versions {
 
-    val zio = "2.0.13"
+    val zio = "2.0.14"
     // val zio_quill    = "3.12.0.Beta1.7"
     val mariadb   = "2.7.4"
     val prelude   = "1.0.0-RC19"
