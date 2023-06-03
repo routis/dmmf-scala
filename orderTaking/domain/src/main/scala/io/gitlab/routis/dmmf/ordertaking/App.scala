@@ -58,7 +58,7 @@ object App extends zio.ZIOAppDefault:
       lines = Array(line, line.copy(orderLineId = "old2", productCode = "G123")),
       promotionCode = null
     )
- 
+
   // noinspection TypeAnnotation
   override def run =
     OrderTakingService
