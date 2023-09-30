@@ -6,9 +6,9 @@ import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrder.Unvalida
 import io.gitlab.routis.dmmf.ordertaking.application.port.out.CheckAddressExists.CheckedAddress
 import io.gitlab.routis.dmmf.ordertaking.application.port.out.{ CheckAddressExists, CheckProductCodeExists }
 import io.gitlab.routis.dmmf.ordertaking.application.service.PlaceOrderService.ValidatedOrder
-import io.gitlab.routis.dmmf.ordertaking.domain.{ OrderId, ZipCode }
+import io.gitlab.routis.dmmf.ordertaking.domain.OrderId
 import zio.*
-import zio.test.{ assert, assertCompletesZIO, assertTrue, check, Assertion, Gen, Spec, ZIOSpecDefault }
+import zio.test.{ assertTrue, check, Spec, ZIOSpecDefault }
 
 object ValidateOrderSpec extends ZIOSpecDefault:
 

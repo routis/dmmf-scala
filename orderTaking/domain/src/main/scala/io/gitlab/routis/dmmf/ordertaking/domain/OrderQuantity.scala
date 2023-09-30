@@ -1,8 +1,8 @@
 package io.gitlab.routis.dmmf.ordertaking.domain
 
-import zio.prelude.{ Assertion, Newtype, Subtype, Validation }
-import zio.prelude.Assertion.{ between, greaterThanOrEqualTo, lessThanOrEqualTo }
 import io.gitlab.routis.dmmf.ordertaking.domain.OrderQuantity.{ KilogramsQuantity, UnitsQuantity }
+import zio.prelude.Assertion.between
+import zio.prelude.{ Assertion, Subtype, Validation }
 
 enum OrderQuantity:
   self =>

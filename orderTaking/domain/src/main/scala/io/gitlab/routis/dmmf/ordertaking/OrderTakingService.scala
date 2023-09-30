@@ -1,6 +1,6 @@
 package io.gitlab.routis.dmmf.ordertaking
 
-import zio.{ IO, ULayer, ZLayer }
+import zio.IO
 import zio.prelude.Validation
 
 trait OrderTakingService:
@@ -31,11 +31,10 @@ object OrderTakingService:
 
   object Dto:
 
-    import io.gitlab.routis.dmmf.ordertaking.domain.*
     import PlaceOrder.*
-
-    import ValidationError.{ Cause, FieldError, IndexedFieldError }
     import PlaceOrderError.{ PricingError, ValidationFailure }
+    import io.gitlab.routis.dmmf.ordertaking.domain.*
+    import ValidationError.{ Cause, FieldError, IndexedFieldError }
 
     case class CustomerInfoDto(firstName: String, lastName: String, emailAddress: String, vipStatus: String)
     object CustomerInfoDto:
@@ -140,8 +139,8 @@ object OrderTakingService:
         def toUnvalidated: UnvalidatedOrder =
 
           import AddressDto.toUnvalidated
-          import OrderLineDto.toUnvalidated
           import CustomerInfoDto.toUnvalidated
+          import OrderLineDto.toUnvalidated
 
           UnvalidatedOrder(
             dto.orderId,

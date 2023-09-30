@@ -1,9 +1,7 @@
 package io.gitlab.routis.dmmf.ordertaking
 
-import org.joda.money.Money as JodaMoney
-import zio.NonEmptyChunk
 import zio.prelude.Assertion.*
-import zio.prelude.{ Assertion, Newtype, Subtype, Validation }
+import zio.prelude.{ Assertion, Newtype, Subtype }
 
 package object domain:
 
