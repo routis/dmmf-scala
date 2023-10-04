@@ -4,7 +4,6 @@ import com.github.javafaker.Faker
 import io.gitlab.routis.dmmf.ordertaking.Generators
 import io.gitlab.routis.dmmf.ordertaking.domain.DomainSpec.test
 import zio.test.Assertion.{ equalTo, isLeft, isRight }
-import zio.test.TestServices.test
 import zio.test.{ assert, check, Gen, Spec }
 
 object DomainSpec extends zio.test.ZIOSpecDefault:

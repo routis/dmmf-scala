@@ -7,10 +7,9 @@ import io.gitlab.routis.dmmf.ordertaking.application.port.in.PlaceOrder.{
   UnvalidatedOrder,
   UnvalidatedOrderLine
 }
-import io.gitlab.routis.dmmf.ordertaking.domain.{ PersonalName, VipStatus, ZipCode }
+import io.gitlab.routis.dmmf.ordertaking.domain.VipStatus
+import zio.test.Gen
 import zio.{ URIO, ZIO, ZLayer }
-import zio.stream.ZStream
-import zio.test.{ Gen, Sample }
 
 import scala.util.matching.Regex
 

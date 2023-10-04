@@ -1,8 +1,6 @@
 package io.gitlab.routis.dmmf.ordertaking.domain
 
-import zio.NonEmptyChunk
-import zio.prelude.Validation
-import ValidationError.{ causeOf, fieldError, indexFieldError, missingField }
+import io.gitlab.routis.dmmf.ordertaking.domain.ValidationError.{ causeOf, fieldError, indexFieldError, missingField }
 import zio.NonEmptyChunk
 import zio.prelude.Validation
 

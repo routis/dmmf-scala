@@ -1,8 +1,7 @@
 package io.gitlab.routis.dmmf.ordertaking.domain
 
-import zio.prelude.{ Assertion, Identity, Subtype, Validation }
-import Assertion.*
-import zio.prelude.newtypes.Sum
+import zio.prelude.Assertion.*
+import zio.prelude.{ Assertion, Subtype, Validation }
 
 object BillingAmount extends Subtype[Money]:
 

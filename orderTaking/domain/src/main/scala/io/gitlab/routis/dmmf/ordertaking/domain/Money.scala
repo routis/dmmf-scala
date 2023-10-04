@@ -25,7 +25,6 @@ object Money:
 
   def total(ms: Iterable[Money]): Money =
     import zio.prelude.*
-    import Money.MoneyAdditionIsIdentity
     ms.reduceIdentity
 
   extension (self: Money)
