@@ -31,7 +31,7 @@ object Dependencies {
     // val zio_quill    = "3.12.0.Beta1.7"
     val mariadb   = "2.7.10"
     val prelude   = "1.0.0-RC21"
-    val jodaMoney = "1.0.3"
+    val jodaMoney = "1.0.4"
     val javafaker = "1.0.2"
   }
 
