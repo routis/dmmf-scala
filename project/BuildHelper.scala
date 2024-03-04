@@ -3,7 +3,7 @@ import sbt.{ ThisBuild, _ }
 
 object BuildHelper {
 
-  val scala3 = "3.3.1"
+  val scala3 = "3.3.3"
 
   private val scala3Options = Seq(
     "-encoding",
